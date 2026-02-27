@@ -1,0 +1,91 @@
+.inventory-page {
+  padding: 16px;
+  padding-bottom: 88px;
+}
+
+.inventory-page h2 {
+  margin: 0 0 8px;
+  font-size: var(--font-heading);
+}
+
+.inventory-intro {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.inventory-battery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inventory-battery-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+
+.inventory-battery-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.inventory-battery-bar {
+  display: flex;
+  height: 28px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg);
+  margin-bottom: 10px;
+}
+
+.inventory-battery-segment {
+  min-width: 0;
+  transition: width 0.2s ease;
+}
+
+.inventory-battery-segment.sold {
+  background: #2d7d46;
+}
+
+.inventory-battery-segment.unsold {
+  background: #c9761e;
+}
+
+.inventory-battery-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.inventory-stat strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.inventory-stat.sold strong {
+  color: #2d7d46;
+}
+
+.inventory-stat.unsold strong {
+  color: #c9761e;
+}
+
+.inventory-battery-actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.inventory-add-sale {
+  display: inline-block;
+  padding: 8px 14px;
+  font-size: 14px;
+  text-decoration: none;
+}

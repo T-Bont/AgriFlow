@@ -1,0 +1,46 @@
+.field-inventory {
+  margin-top: 8px;
+}
+
+.field-inventory-bar {
+  display: flex;
+  height: 20px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg);
+  margin-bottom: 8px;
+}
+
+.field-inventory-segment {
+  min-width: 0;
+  transition: width 0.2s ease;
+}
+
+.field-inventory-segment.sold {
+  background: #2d7d46;
+}
+
+.field-inventory-segment.unsold {
+  background: #c9761e;
+}
+
+.field-inventory-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.field-inventory-stat strong {
+  color: var(--text);
+}
+
+.field-inventory-stat.sold strong {
+  color: #2d7d46;
+}
+
+.field-inventory-stat.unsold strong {
+  color: #c9761e;
+}
+

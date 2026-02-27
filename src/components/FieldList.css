@@ -1,0 +1,51 @@
+.field-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.field-list li {
+  margin-bottom: 8px;
+}
+
+.field-list-item {
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--touch-min);
+}
+
+.field-list-name {
+  font-weight: 600;
+}
+
+.field-list-meta {
+  font-size: 14px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-list-meta .positive {
+  color: #2d5a27;
+  font-weight: 500;
+}
+
+.field-list-meta .negative {
+  color: #b33;
+  font-weight: 500;
+}
+
+.field-list-empty {
+  color: var(--text-muted);
+  margin: 0;
+  padding: 24px 0;
+}

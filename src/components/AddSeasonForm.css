@@ -1,0 +1,43 @@
+.add-season-btn {
+  margin-top: 12px;
+}
+
+.add-season-form {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-season-form label span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.add-season-form input,
+.add-season-form select {
+  min-height: var(--touch-min);
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: var(--radius);
+  width: 100%;
+}
+
+.add-season-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.add-season-actions button {
+  flex: 1;
+}
+
+.add-season-actions button:first-child {
+  background: var(--primary);
+  color: #fff;
+}

@@ -1,0 +1,33 @@
+import { Outlet, NavLink } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/stores/toast'
+import './Layout.css'
+
+export default function Layout() {
+  const { user } = useAuth()
+  const toastMessage = useToast((s) => s.message)
+  return (
+    <div className="layout">
+      <header className="layout-header">
+        <h1 className="layout-title">AgriFlow</h1>
+        <span className="layout-farm">{user?.user_metadata?.farm_name ?? 'My Farm'}</span>
+      </header>
+      <nav className="layout-nav" aria-label="Main">
+        <NavLink to="/" className={({ isActive }) => (isActive ? 'layout-nav-link active' : 'layout-nav-link')} end>
+          Home
+        </NavLink>
+        <NavLink to="/inventory" className={({ isActive }) => (isActive ? 'layout-nav-link active' : 'layout-nav-link')}>
+          Inventory
+        </NavLink>
+      </nav>
+      <main className="layout-main">
+        <Outlet />
+      </main>
+      {toastMessage && (
+        <div className="toast" role="status">
+          {toastMessage}
+        </div>
+      )}
+    </div>
+  )
+}

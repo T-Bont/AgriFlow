@@ -1,0 +1,89 @@
+.login {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--bg);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  padding: 24px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.login-title {
+  margin: 0 0 4px;
+  font-size: 28px;
+  color: var(--primary);
+}
+
+.login-subtitle {
+  margin: 0 0 24px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.login-form label {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.login-form label span {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.login-form input {
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 12px 14px;
+  border: 1px solid #ccc;
+  border-radius: var(--radius);
+}
+
+.login-message {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.login-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.login-actions button {
+  flex: 1;
+  background: var(--primary);
+  color: #fff;
+}
+
+.login-actions button:disabled {
+  opacity: 0.7;
+}
+
+.login-secondary {
+  background: var(--primary-light);
+  color: #fff;
+  border: 2px solid var(--primary-light);
+}
+
+.login-form-signup {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #eee;
+}
+
+.login-hint {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+}

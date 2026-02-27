@@ -1,0 +1,80 @@
+.log-page-wrap {
+  padding: 16px;
+  padding-bottom: 32px;
+}
+
+.log-page-header {
+  margin-bottom: 20px;
+}
+
+.log-page-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.log-page-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.log-page-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.log-page-header .back-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 16px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  min-height: auto;
+  cursor: pointer;
+}
+
+.log-page-header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.log-page-field {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.log-page-season {
+  min-height: var(--touch-min);
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: var(--radius);
+  font-size: 16px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.field-picker {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.field-picker li {
+  margin-bottom: 8px;
+}
+
+.field-picker button {
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid #eee;
+  border-radius: var(--radius);
+  min-height: var(--touch-min);
+}

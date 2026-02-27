@@ -1,0 +1,30 @@
+.field-chart {
+  background: var(--surface);
+  padding: 12px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.field-chart-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.field-chart-summary .positive {
+  color: #2d5a27;
+}
+
+.field-chart-summary .negative {
+  color: #b33;
+}
+
+.field-chart-empty {
+  padding: 24px;
+  text-align: center;
+  background: var(--surface);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 14px;
+}

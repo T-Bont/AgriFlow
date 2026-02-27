@@ -1,0 +1,32 @@
+-- Harvest and Inventory: view_field_pnl updates
+-- Run this in the Supabase SQL editor after adding the Harvest transaction category.
+--
+-- 1. Allow 'Harvest' in transaction category
+-- If your transactions.category uses an enum, add the new value:
+--   ALTER TYPE transaction_category_enum ADD VALUE IF NOT EXISTS 'Harvest';
+-- If it's a text column with a check constraint, add 'Harvest' to the allowed values.
+--
+-- 2. Update view_field_pnl
+-- The view must:
+--   a) Exclude category = 'Harvest' from gross_revenue (harvest is inventory, not income).
+--   b) Set total_harvested_bushels from Harvest transactions: SUM(quantity) WHERE category = 'Harvest' AND unit = 'bu' per season.
+--
+-- Example logic (adapt to your existing view definition):
+--
+-- total_harvested_bushels:
+--   COALESCE((
+--     SELECT SUM(t.quantity)::numeric
+--     FROM transactions t
+--     WHERE t.season_id = s.id
+--       AND t.category = 'Harvest'
+--       AND t.unit = 'bu'
+--       AND t.quantity IS NOT NULL
+--   ), 0)
+--
+-- gross_revenue (income sum):
+--   Only sum transactions where type = 'INCOME' AND (category IS NULL OR category != 'Harvest').
+--   So: SUM(amount) WHERE type = 'INCOME' AND (category IS NULL OR category <> 'Harvest')
+--
+-- Replace your existing view_field_pnl definition with one that applies the above.
+-- If the view currently uses seasons.actual_harvest_bushels for total_harvested_bushels,
+-- switch to the Harvest-transaction sum above so the Inventory page and P&L stay in sync.

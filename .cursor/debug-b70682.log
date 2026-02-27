@@ -1,0 +1,20 @@
+{"sessionId":"b70682","location":"MapView.tsx:init","message":"map effect run","data":{"hasContainer":true,"hasToken":true,"offsetWidth":707,"offsetHeight":280},"timestamp":1771731775794,"hypothesisId":"H1"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":false,"hasMap":false,"drawMode":false,"hasOnBoundaryDrawn":false},"timestamp":1771731775795,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:init","message":"map effect run","data":{"hasContainer":true,"hasToken":true,"offsetWidth":707,"offsetHeight":280},"timestamp":1771731775796,"hypothesisId":"H1"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":false,"hasMap":false,"drawMode":false,"hasOnBoundaryDrawn":false},"timestamp":1771731775796,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:map-created","message":"Map instance created","data":{},"timestamp":1771731775858,"hypothesisId":"H2"}
+{"sessionId":"b70682","location":"MapView.tsx:map-created","message":"Map instance created","data":{},"timestamp":1771731775875,"hypothesisId":"H2"}
+{"sessionId":"b70682","location":"MapView.tsx:map-load","message":"map load event fired","data":{},"timestamp":1771731777298,"hypothesisId":"H3"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":true,"hasMap":true,"drawMode":false,"hasOnBoundaryDrawn":false},"timestamp":1771731777313,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:map-load","message":"map load event fired","data":{},"timestamp":1771731777410,"hypothesisId":"H3"}
+{"sessionId":"b70682","location":"Dashboard.tsx:draw-click","message":"Draw on map clicked","data":{},"timestamp":1771731827772,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":true,"hasMap":true,"drawMode":true,"hasOnBoundaryDrawn":true},"timestamp":1771731827782,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"Dashboard.tsx:draw-click","message":"Draw on map clicked","data":{},"timestamp":1771731838523,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":true,"hasMap":true,"drawMode":true,"hasOnBoundaryDrawn":true},"timestamp":1771731847543,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":true,"hasMap":true,"drawMode":true,"hasOnBoundaryDrawn":true},"timestamp":1771731848221,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"Dashboard.tsx:draw-click","message":"Draw on map clicked","data":{},"timestamp":1771731851517,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":true,"hasMap":true,"drawMode":true,"hasOnBoundaryDrawn":true},"timestamp":1771731879130,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:map-created","message":"Map instance created","data":{},"timestamp":1771731879208,"hypothesisId":"H2"}
+{"sessionId":"b70682","location":"MapView.tsx:map-load","message":"map load event fired","data":{},"timestamp":1771731880169,"hypothesisId":"H3"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":true,"hasMap":true,"drawMode":true,"hasOnBoundaryDrawn":true},"timestamp":1771731885856,"hypothesisId":"D1"}
+{"sessionId":"b70682","location":"MapView.tsx:draw-effect","message":"draw effect run","data":{"loaded":true,"hasMap":true,"drawMode":true,"hasOnBoundaryDrawn":true},"timestamp":1771731888928,"hypothesisId":"D1"}
