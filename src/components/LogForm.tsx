@@ -72,7 +72,7 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
   const isIncome = INCOME_CATEGORIES.includes(category)
   const type: TransactionType = isIncome ? 'INCOME' : 'EXPENSE'
   const isHarvest = category === 'Harvest'
-  const showVendorAndNotes = showAllFields || (!isIncome && !isHarvest)
+  const showVendor = showAllFields || (!isIncome && !isHarvest)
   const showFertilizer = showAllFields || category === 'Fertilizer' || category === 'Chemical'
   const showGrainSale = showAllFields || category === 'Grain Sale'
   const showHarvest = showAllFields || isHarvest
@@ -297,7 +297,7 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
           />
         </label>
       )}
-      {showVendorAndNotes && (
+      {showVendor && (
         <label>
           <span>Vendor / Payee</span>
           <select
@@ -585,12 +585,10 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
           </div>
         </>
       )}
-      {showVendorAndNotes && (
-        <label>
-          <span>Notes</span>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-        </label>
-      )}
+      <label>
+        <span>Notes</span>
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+      </label>
       <div className="log-form-actions">
         <button type="submit" disabled={addTransaction.isPending}>
           {addTransaction.isPending ? 'Saving…' : 'Save'}
