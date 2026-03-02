@@ -180,7 +180,32 @@ serve(async (req) => {
 
   const existingSettings = (profile.settings ?? {}) as Record<string, unknown>
 
+  // Persist a snapshot row so static boundaries can reference it.
+  const { data: snapshotRow, error: snapshotInsertError } = await supabase
+    .from('dashboard_snapshots')
+    .insert({
+      user_id: user.id,
+      bbox,
+      image_url: publicUrl,
+      width,
+      height,
+      scale,
+    } as never)
+    .select('id')
+    .single()
+
+  if (snapshotInsertError || !snapshotRow) {
+    return new Response(
+      JSON.stringify({ error: 'Failed to persist dashboard snapshot', details: snapshotInsertError?.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
+  }
+
   const dashboardSnapshot = {
+    snapshot_id: snapshotRow.id,
     bbox,
     image_url: publicUrl,
     width,

@@ -19,6 +19,8 @@ interface MapViewProps {
   onMapClick?: (lng: number, lat: number) => void
   initialCenter?: [number, number]
   initialZoom?: number
+  /** When true, force a north-up, pitch-0 (2D) camera and disable rotation/pitch gestures. */
+  northUp2D?: boolean
   /** When 'profit', polygon fill is green (positive) or red (negative) using pnlByFieldId */
   colorBy?: MapColorBy
   /** Required when colorBy === 'profit'. Key = field_id. */
@@ -42,6 +44,19 @@ export interface MapViewHandle {
         }
       }
     | null
+  /** Returns a normalized north-up 2D view plus the map's CSS pixel size (for static image sizing). */
+  getSnapshotView: () =>
+    | {
+        bbox: { west: number; south: number; east: number; north: number }
+        camera: {
+          center: [number, number]
+          zoom: number
+          bearing: number
+          pitch: number
+        }
+        size: { width: number; height: number }
+      }
+    | null
 }
 
 const CROP_COLORS: Record<string, string> = {
@@ -59,6 +74,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     onFieldSelect,
     initialCenter = [-98.5795, 39.8283],
     initialZoom = 3,
+    northUp2D = false,
     colorBy = 'crop',
     pnlByFieldId = {},
     drawMode = false,
@@ -82,7 +98,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       getCurrentView: () => {
         if (!mapRef.current) return null
         const map = mapRef.current
-        const bounds = map.getBounds()
+        const bounds = map.getBounds()!
         const center = map.getCenter()
         return {
           bbox: {
@@ -97,6 +113,37 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
             bearing: map.getBearing(),
             pitch: map.getPitch(),
           },
+        }
+      },
+      getSnapshotView: () => {
+        if (!mapRef.current) return null
+        const map = mapRef.current
+        // Force a predictable 2D camera to match bbox-based static imagery + simple overlay math.
+        try {
+          map.setBearing(0)
+          map.setPitch(0)
+        } catch {
+          // ignore
+        }
+        const bounds = map.getBounds()!
+        const center = map.getCenter()
+        const canvas = map.getCanvas()
+        const width = Math.round(canvas.clientWidth || canvas.width)
+        const height = Math.round(canvas.clientHeight || canvas.height)
+        return {
+          bbox: {
+            west: bounds.getWest(),
+            south: bounds.getSouth(),
+            east: bounds.getEast(),
+            north: bounds.getNorth(),
+          },
+          camera: {
+            center: [center.lng, center.lat],
+            zoom: map.getZoom(),
+            bearing: map.getBearing(),
+            pitch: map.getPitch(),
+          },
+          size: { width, height },
         }
       },
     }),
@@ -140,6 +187,22 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       cleanupMapRef.current = null
     }
   }, [initialCenter[0], initialCenter[1], initialZoom])
+
+  useEffect(() => {
+    if (!loaded || !mapRef.current) return
+    if (!northUp2D) return
+    const map = mapRef.current
+    try {
+      map.setBearing(0)
+      map.setPitch(0)
+      map.dragRotate.disable()
+      map.touchZoomRotate.disableRotation()
+      // Prevent any future pitch from being applied via controls.
+      map.setMaxPitch(0)
+    } catch {
+      // ignore
+    }
+  }, [loaded, northUp2D])
 
   useEffect(() => {
     if (!loaded || !mapRef.current || !drawMode || !onBoundaryDrawn) return

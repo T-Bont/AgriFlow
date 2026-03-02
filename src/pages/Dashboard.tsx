@@ -4,16 +4,21 @@ import { useFields } from '@/hooks/useFields'
 import { useFieldPnl } from '@/hooks/useFieldPnl'
 import MapView from '@/components/MapView'
 import type { MapColorBy } from '@/components/MapView'
-import DashboardSnapshotView from '@/components/DashboardSnapshotView'
+import DashboardSnapshotView, { type SnapshotEditMode } from '@/components/DashboardSnapshotView'
 import FAB from '@/components/FAB'
 import FieldList from '@/components/FieldList'
 import type { Field } from '@/types/database'
 import { useProfile } from '@/hooks/useProfile'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
+import { useDashboardSnapshotBoundaries } from '@/hooks/useDashboardSnapshotBoundaries'
+import { projectPolygonToRingNorm } from '@/lib/snapshotProjection'
 import './Dashboard.css'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { profile } = useProfile()
+  const { user } = useAuth()
   const { fields, isLoading: fieldsLoading, createField } = useFields()
   const { data: pnlRows = [] } = useFieldPnl()
   const [showAddField, setShowAddField] = useState(false)
@@ -25,8 +30,26 @@ export default function Dashboard() {
   const [draftBoundary, setDraftBoundary] = useState<GeoJSON.Polygon | null>(null)
   const [draftGisAcres, setDraftGisAcres] = useState<number | null>(null)
   const [useLiveMap, setUseLiveMap] = useState(false)
+  const [snapshotMode, setSnapshotMode] = useState<SnapshotEditMode>('view')
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
+  const [editingRingNorm, setEditingRingNorm] = useState<number[][] | null>(null)
+  const [draftStaticRingNorm, setDraftStaticRingNorm] = useState<number[][] | null>(null)
 
   const hasSnapshot = !!profile?.settings?.dashboard_snapshot
+  const snapshot = profile?.settings?.dashboard_snapshot ?? null
+  const showSnapshot = hasSnapshot && !useLiveMap
+  const snapshotId = snapshot?.snapshot_id ?? null
+
+  const { data: staticBoundaryRows = [], refetch: refetchStaticBoundaries } =
+    useDashboardSnapshotBoundaries(snapshotId)
+
+  const staticBoundariesByFieldId = useMemo(() => {
+    const map: Record<string, number[][]> = {}
+    for (const row of staticBoundaryRows) {
+      map[row.field_id] = row.ring_norm
+    }
+    return map
+  }, [staticBoundaryRows])
 
   const availableYears = useMemo(
     () => [...new Set(pnlRows.map((r) => r.year))].sort((a, b) => b - a),
@@ -87,17 +110,49 @@ export default function Dashboard() {
   const handleAddField = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newName.trim()) return
-    await createField.mutateAsync({
+    const creatingFromStatic = !!draftStaticRingNorm
+    const created = await createField.mutateAsync({
       name: newName.trim(),
       acres: newAcres ? parseFloat(newAcres) : draftGisAcres ?? undefined,
-      boundary: draftBoundary ?? undefined,
-      gis_acres: draftGisAcres ?? undefined,
+      boundary: creatingFromStatic ? undefined : (draftBoundary ?? undefined),
+      gis_acres: creatingFromStatic ? undefined : (draftGisAcres ?? undefined),
     })
+
+    if (user?.id && snapshotId) {
+      // Seed or persist a static boundary for this snapshot:
+      // - If the user drew on the static snapshot, use that ring.
+      // - If they drew in live map, project the GeoJSON polygon into the snapshot and normalize.
+      const ringNorm =
+        draftStaticRingNorm ??
+        (draftBoundary && snapshot
+          ? projectPolygonToRingNorm(
+              { bbox: snapshot.bbox, width: snapshot.width, height: snapshot.height },
+              draftBoundary,
+            )
+          : null)
+
+      if (ringNorm && ringNorm.length >= 3) {
+        await supabase
+          .from('dashboard_snapshot_field_boundaries')
+          .upsert(
+            {
+              user_id: user.id,
+              snapshot_id: snapshotId,
+              field_id: created.id,
+              ring_norm: ringNorm,
+              updated_at: new Date().toISOString(),
+            } as never,
+            { onConflict: 'snapshot_id,field_id' },
+          )
+        await refetchStaticBoundaries()
+      }
+    }
     setNewName('')
     setNewAcres('')
     setShowAddField(false)
     setDraftBoundary(null)
     setDraftGisAcres(null)
+    setDraftStaticRingNorm(null)
   }
 
   const cancelAddField = () => {
@@ -105,19 +160,73 @@ export default function Dashboard() {
     setDrawModeForNewField(false)
     setDraftBoundary(null)
     setDraftGisAcres(null)
+    setDraftStaticRingNorm(null)
+  }
+
+  const cancelSnapshotEdit = () => {
+    setSnapshotMode('view')
+    setSelectedFieldId(null)
+    setEditingRingNorm(null)
+    setDraftStaticRingNorm(null)
+  }
+
+  const saveEditedBoundary = async () => {
+    if (!user?.id || !snapshotId || !selectedFieldId || !editingRingNorm) return
+    await supabase
+      .from('dashboard_snapshot_field_boundaries')
+      .upsert(
+        {
+          user_id: user.id,
+          snapshot_id: snapshotId,
+          field_id: selectedFieldId,
+          ring_norm: editingRingNorm,
+          updated_at: new Date().toISOString(),
+        } as never,
+        { onConflict: 'snapshot_id,field_id' },
+      )
+    await refetchStaticBoundaries()
+    cancelSnapshotEdit()
   }
 
   return (
     <div className="dashboard-page">
       <section className="satellite-dashboard" aria-label="Satellite map">
-        <div className="satellite-dashboard-map">
-          {hasSnapshot && !useLiveMap ? (
+        <div
+          className="satellite-dashboard-map"
+          style={
+            showSnapshot && snapshot
+              ? {
+                  height: 'auto',
+                  aspectRatio: `${snapshot.width} / ${snapshot.height}`,
+                  minHeight: 280,
+                }
+              : undefined
+          }
+        >
+          {showSnapshot && snapshot ? (
             <DashboardSnapshotView
-              snapshot={profile.settings.dashboard_snapshot}
+              snapshot={snapshot}
               fields={fieldsWithCrop}
               pnlByFieldId={mapColorBy === 'profit' ? pnlByFieldId : undefined}
               colorBy={mapColorBy}
               onFieldSelect={handleFieldSelect}
+              mode={snapshotMode}
+              staticBoundariesByFieldId={staticBoundariesByFieldId}
+              selectedFieldId={selectedFieldId}
+              editingRingNorm={editingRingNorm}
+              draftNewRingNorm={snapshotMode === 'draw_new_field' ? draftStaticRingNorm : null}
+              onSelectFieldForEdit={(id, initial) => {
+                setSelectedFieldId(id)
+                setEditingRingNorm(initial)
+              }}
+              onEditingRingChange={(ring) => setEditingRingNorm(ring)}
+              onDraftNewRingChange={(ring) => setDraftStaticRingNorm(ring)}
+              onDraftNewRingComplete={(ring) => {
+                setDraftStaticRingNorm(ring)
+                setSnapshotMode('view')
+                setShowAddField(true)
+                setNewAcres('')
+              }}
             />
           ) : (
             <MapView
@@ -143,6 +252,52 @@ export default function Dashboard() {
           >
             Edit field layout
           </button>
+          <button
+            type="button"
+            className="btn-outline"
+            disabled={showSnapshot}
+            onClick={() => {
+              if (!showSnapshot) {
+                setDrawModeForNewField(true)
+              }
+            }}
+          >
+            Draw new field
+          </button>
+          <button
+            type="button"
+            className="btn-outline"
+            disabled={!showSnapshot}
+            onClick={() => {
+              setSnapshotMode('edit_boundary')
+              setSelectedFieldId(null)
+              setEditingRingNorm(null)
+            }}
+          >
+            Edit field boundary
+          </button>
+          {snapshotMode !== 'view' && (
+            <>
+              <span className="satellite-dashboard-label">
+                {snapshotMode === 'draw_new_field'
+                  ? 'Tap points to outline a field. Tap near the first point to finish.'
+                  : 'Tap a field to select, then drag points to adjust.'}
+              </span>
+              <button type="button" className="btn-outline" onClick={cancelSnapshotEdit}>
+                Cancel
+              </button>
+              {snapshotMode === 'edit_boundary' && (
+                <button
+                  type="button"
+                  className="btn-outline"
+                  disabled={!selectedFieldId || !editingRingNorm}
+                  onClick={saveEditedBoundary}
+                >
+                  Save boundary
+                </button>
+              )}
+            </>
+          )}
           {drawModeForNewField && (
             <span className="satellite-dashboard-label">Draw a polygon on the map, then name the field below.</span>
           )}
@@ -268,13 +423,6 @@ export default function Dashboard() {
                 onClick={() => setShowAddField(true)}
               >
                 + Add field
-              </button>
-              <button
-                type="button"
-                className="btn-outline"
-                onClick={() => setDrawModeForNewField(true)}
-              >
-                Draw on map
               </button>
             </div>
           )}

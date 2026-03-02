@@ -38,35 +38,18 @@ export default function MapEditLayoutView() {
 
   const handleEstablishDashboardView = async () => {
     if (isSavingView) return
-    const view = mapRef.current?.getCurrentView()
+    const view = mapRef.current?.getSnapshotView()
     if (!view) {
       alert('Map is not ready yet. Try again in a moment.')
       return
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e0eb3075-882d-4987-a8a6-bc15874059b1', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': '96d0fb',
-      },
-      body: JSON.stringify({
-        sessionId: '96d0fb',
-        runId: 'pre-fix',
-        hypothesisId: 'H1',
-        location: 'src/pages/MapEditLayoutView.tsx:handleEstablishDashboardView',
-        message: 'Establish dashboard view pressed',
-        data: { bbox: view.bbox, camera: view.camera },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion agent log
     setIsSavingView(true)
     try {
-      const { bbox, camera } = view
-      const width = Math.min(1000, Math.max(400, window.innerWidth || 800))
-      const height = Math.min(800, Math.max(300, Math.round((window.innerHeight || 600) * 0.5)))
-      const { data, error } = await supabase.functions.invoke('dashboard_snapshot', {
+      const { bbox, camera, size } = view
+      // Use the live map's exact CSS pixel size so the Static Images API matches the user's framing.
+      const width = Math.min(1280, Math.max(320, size.width))
+      const height = Math.min(1280, Math.max(320, size.height))
+      const { error } = await supabase.functions.invoke('dashboard_snapshot', {
         body: {
           bbox,
           width,
@@ -76,45 +59,9 @@ export default function MapEditLayoutView() {
         },
       })
       if (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/e0eb3075-882d-4987-a8a6-bc15874059b1', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Debug-Session-Id': '96d0fb',
-          },
-          body: JSON.stringify({
-            sessionId: '96d0fb',
-            runId: 'pre-fix',
-            hypothesisId: 'H2',
-            location: 'src/pages/MapEditLayoutView.tsx:handleEstablishDashboardView',
-            message: 'dashboard_snapshot invoke error',
-            data: { message: error.message, name: error.name },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {})
-        // #endregion agent log
         alert('Failed to establish dashboard view. Please try again.')
         return
       }
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e0eb3075-882d-4987-a8a6-bc15874059b1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Session-Id': '96d0fb',
-        },
-        body: JSON.stringify({
-          sessionId: '96d0fb',
-          runId: 'pre-fix',
-          hypothesisId: 'H3',
-          location: 'src/pages/MapEditLayoutView.tsx:handleEstablishDashboardView',
-          message: 'dashboard_snapshot invoke success',
-          data: { hasData: !!data },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion agent log
       await refetchProfile()
       alert('Dashboard view updated.')
       navigate('/')
@@ -134,6 +81,7 @@ export default function MapEditLayoutView() {
             colorBy={mapColorBy}
             pnlByFieldId={mapColorBy === 'profit' ? pnlByFieldId : undefined}
             fitBoundsToFields
+            northUp2D
           />
         </div>
         <div className="satellite-dashboard-toggles">

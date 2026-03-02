@@ -29,6 +29,7 @@ export interface Profile {
     gov_programs?: string[]
     /** Static dashboard snapshot configuration stored in profiles.settings JSON (farm-level). */
     dashboard_snapshot?: {
+      snapshot_id?: string
       bbox: {
         west: number
         south: number
@@ -126,6 +127,26 @@ export interface FieldPnlRow {
   net_income_per_acre: number | null
 }
 
+export interface DashboardSnapshot {
+  id: string
+  user_id: string
+  bbox: Record<string, unknown>
+  image_url: string
+  width: number
+  height: number
+  scale: number | null
+  created_at: string
+}
+
+export interface DashboardSnapshotFieldBoundary {
+  id: string
+  user_id: string
+  snapshot_id: string
+  field_id: string
+  ring_norm: number[][]
+  updated_at: string
+}
+
 declare global {
   namespace GeoJSON {
     interface Polygon {
@@ -143,6 +164,8 @@ export interface Database {
       seasons: { Row: Season; Insert: Omit<Season, 'id' | 'created_at' | 'updated_at'> & { id?: string }; Update: Partial<Season> }
       contracts: { Row: Contract; Insert: Omit<Contract, 'id' | 'created_at' | 'updated_at'> & { id?: string }; Update: Partial<Contract> }
       transactions: { Row: Transaction; Insert: Omit<Transaction, 'id' | 'created_at' | 'updated_at'> & { id?: string }; Update: Partial<Transaction> }
+      dashboard_snapshots: { Row: DashboardSnapshot; Insert: Omit<DashboardSnapshot, 'id' | 'created_at'> & { id?: string; created_at?: string }; Update: Partial<DashboardSnapshot> }
+      dashboard_snapshot_field_boundaries: { Row: DashboardSnapshotFieldBoundary; Insert: Omit<DashboardSnapshotFieldBoundary, 'id' | 'updated_at'> & { id?: string; updated_at?: string }; Update: Partial<DashboardSnapshotFieldBoundary> }
     }
     Views: {
       view_field_pnl: { Row: FieldPnlRow }

@@ -17,12 +17,23 @@ type SnapshotConfig = {
 
 type FieldWithCrop = Field & { crop_type?: string }
 
+export type SnapshotEditMode = 'view' | 'draw_new_field' | 'edit_boundary'
+
 interface DashboardSnapshotViewProps {
   snapshot: SnapshotConfig
   fields: FieldWithCrop[]
   pnlByFieldId?: Record<string, Pick<FieldPnlRow, 'net_income'>>
   colorBy?: MapColorBy
   onFieldSelect: (field: Field) => void
+  mode?: SnapshotEditMode
+  staticBoundariesByFieldId?: Record<string, number[][]>
+  selectedFieldId?: string | null
+  editingRingNorm?: number[][] | null
+  draftNewRingNorm?: number[][] | null
+  onSelectFieldForEdit?: (fieldId: string | null, initialRingNorm: number[][] | null) => void
+  onEditingRingChange?: (ringNorm: number[][]) => void
+  onDraftNewRingChange?: (ringNorm: number[][]) => void
+  onDraftNewRingComplete?: (ringNorm: number[][]) => void
 }
 
 const CROP_COLORS: Record<string, string> = {
@@ -44,7 +55,7 @@ function projectToWebMercator(lng: number, lat: number): Point {
   return { x, y }
 }
 
-function createLonLatToPixel(snapshot: SnapshotConfig, width: number, height: number) {
+function createLonLatToPixel(snapshot: SnapshotConfig) {
   const { west, south, east, north } = snapshot.bbox
   const sw = projectToWebMercator(west, south)
   const ne = projectToWebMercator(east, north)
@@ -60,10 +71,24 @@ function createLonLatToPixel(snapshot: SnapshotConfig, width: number, height: nu
     const u = (p.x - minX) / dx
     const v = (p.y - minY) / dy
     return {
-      x: u * width,
-      y: v * height,
+      x: u * snapshot.width,
+      y: v * snapshot.height,
     }
   }
+}
+
+function ringNormToPixels(ringNorm: number[][], width: number, height: number): Point[] {
+  return ringNorm.map(([nx, ny]) => ({ x: nx * width, y: ny * height }))
+}
+
+function ringPixelsToNorm(points: Point[], width: number, height: number): number[][] {
+  const w = width || 1
+  const h = height || 1
+  return points.map((p) => [p.x / w, p.y / h])
+}
+
+function clamp01(n: number) {
+  return Math.max(0, Math.min(1, n))
 }
 
 export default function DashboardSnapshotView({
@@ -72,21 +97,26 @@ export default function DashboardSnapshotView({
   pnlByFieldId = {},
   colorBy = 'crop',
   onFieldSelect,
+  mode = 'view',
+  staticBoundariesByFieldId = {},
+  selectedFieldId = null,
+  editingRingNorm = null,
+  draftNewRingNorm = null,
+  onSelectFieldForEdit,
+  onEditingRingChange,
+  onDraftNewRingChange,
+  onDraftNewRingComplete,
 }: DashboardSnapshotViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const svgRef = useRef<SVGSVGElement | null>(null)
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef<{ x: number; y: number } | null>(null)
+  const [dragVertexIdx, setDragVertexIdx] = useState<number | null>(null)
 
-  const displayWidth = containerSize.width || snapshot.width
-  const displayHeight = containerSize.height || snapshot.height
-
-  const toPixel = useMemo(
-    () => createLonLatToPixel(snapshot, displayWidth, displayHeight),
-    [snapshot, displayWidth, displayHeight],
-  )
+  const toPixel = useMemo(() => createLonLatToPixel(snapshot), [snapshot])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -94,24 +124,6 @@ export default function DashboardSnapshotView({
     const updateSize = () => {
       const rect = el.getBoundingClientRect()
       setContainerSize({ width: rect.width, height: rect.height })
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e0eb3075-882d-4987-a8a6-bc15874059b1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Session-Id': '96d0fb',
-        },
-        body: JSON.stringify({
-          sessionId: '96d0fb',
-          runId: 'snapshot-debug',
-          hypothesisId: 'H-size',
-          location: 'src/components/DashboardSnapshotView.tsx:updateSize',
-          message: 'snapshot container size',
-          data: { width: rect.width, height: rect.height },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion agent log
     }
     updateSize()
     const observer = new ResizeObserver(updateSize)
@@ -125,8 +137,10 @@ export default function DashboardSnapshotView({
   }, [snapshot.image_url])
 
   const clampOffset = (next: { x: number; y: number }) => {
-    const imgWidth = displayWidth * scale
-    const imgHeight = displayHeight * scale
+    const baseWidth = containerSize.width || snapshot.width
+    const baseHeight = containerSize.height || snapshot.height
+    const imgWidth = baseWidth * scale
+    const imgHeight = baseHeight * scale
     const cw = containerSize.width || imgWidth
     const ch = containerSize.height || imgHeight
     const minX = Math.min(0, cw - imgWidth)
@@ -151,6 +165,7 @@ export default function DashboardSnapshotView({
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (e.button !== 0) return
+    if (mode !== 'view') return
     setIsPanning(true)
     panStartRef.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
@@ -168,13 +183,31 @@ export default function DashboardSnapshotView({
     ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
   }
 
+  const getEventNorm = (e: React.PointerEvent) => {
+    const el = svgRef.current
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const nx = (e.clientX - rect.left) / (rect.width || 1)
+    const ny = (e.clientY - rect.top) / (rect.height || 1)
+    return { nx: clamp01(nx), ny: clamp01(ny) }
+  }
+
   const projectedFields = useMemo(() => {
     return fields
-      .filter((f) => f.boundary && typeof f.boundary === 'object' && 'coordinates' in f.boundary)
       .map((f) => {
-        const polygon = f.boundary as GeoJSON.Polygon
-        const ring = polygon.coordinates[0] ?? []
-        const points: Point[] = ring.map(([lng, lat]) => toPixel(lng, lat))
+        const staticRing = staticBoundariesByFieldId[f.id]
+
+        let points: Point[] | null = null
+        if (staticRing && staticRing.length >= 3) {
+          points = ringNormToPixels(staticRing, snapshot.width, snapshot.height)
+        } else if (f.boundary && typeof f.boundary === 'object' && 'coordinates' in f.boundary) {
+          const polygon = f.boundary as GeoJSON.Polygon
+          const ring = polygon.coordinates[0] ?? []
+          points = ring.map(([lng, lat]) => toPixel(lng, lat))
+        }
+
+        if (!points || points.length < 3) return null
+
         const pnl = pnlByFieldId[f.id]
         const profitClass = pnl ? (pnl.net_income >= 0 ? 'positive' : 'negative') : null
         let fill = CROP_COLORS.Other
@@ -193,10 +226,75 @@ export default function DashboardSnapshotView({
           field: f,
           points,
           fill,
+          hasStatic: !!staticRing,
         }
       })
-      .filter((f) => f.points.length >= 3)
-  }, [fields, pnlByFieldId, colorBy, toPixel])
+      .filter((f): f is { field: FieldWithCrop; points: Point[]; fill: string; hasStatic: boolean } => !!f)
+  }, [fields, pnlByFieldId, colorBy, toPixel, staticBoundariesByFieldId, snapshot.width, snapshot.height])
+
+  const selectedFieldPixels = useMemo(() => {
+    if (!selectedFieldId) return null
+    const ringNorm = editingRingNorm ?? staticBoundariesByFieldId[selectedFieldId] ?? null
+    if (!ringNorm) return null
+    return ringNormToPixels(ringNorm, snapshot.width, snapshot.height)
+  }, [selectedFieldId, editingRingNorm, staticBoundariesByFieldId, snapshot.width, snapshot.height])
+
+  const handlePolygonActivate = (field: Field, points: Point[]) => {
+    if (mode === 'view') {
+      onFieldSelect(field)
+      return
+    }
+    if (mode === 'edit_boundary') {
+      const staticRing = staticBoundariesByFieldId[field.id]
+      const initialRingNorm =
+        staticRing ??
+        ringPixelsToNorm(points, snapshot.width, snapshot.height).map(([nx, ny]) => [clamp01(nx), clamp01(ny)])
+      onSelectFieldForEdit?.(field.id, initialRingNorm)
+    }
+  }
+
+  const handleSvgPointerDown: React.PointerEventHandler<SVGSVGElement> = (e) => {
+    if (mode !== 'edit_boundary') return
+    if (dragVertexIdx == null) return
+    ;(e.currentTarget as SVGSVGElement).setPointerCapture(e.pointerId)
+  }
+
+  const handleSvgPointerMove: React.PointerEventHandler<SVGSVGElement> = (e) => {
+    if (mode !== 'edit_boundary') return
+    if (dragVertexIdx == null || !editingRingNorm || !onEditingRingChange) return
+    const norm = getEventNorm(e)
+    if (!norm) return
+    const next = editingRingNorm.map((p, idx) => (idx === dragVertexIdx ? [norm.nx, norm.ny] : p))
+    onEditingRingChange(next)
+  }
+
+  const handleSvgPointerUp: React.PointerEventHandler<SVGSVGElement> = (e) => {
+    if (mode !== 'edit_boundary') return
+    setDragVertexIdx(null)
+    try {
+      ;(e.currentTarget as SVGSVGElement).releasePointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleSvgTapToDraw: React.PointerEventHandler<SVGSVGElement> = (e) => {
+    if (mode !== 'draw_new_field' || !onDraftNewRingChange) return
+    const norm = getEventNorm(e)
+    if (!norm) return
+    const current = draftNewRingNorm ?? []
+    if (current.length >= 3) {
+      const [fx, fy] = current[0]
+      const dx = norm.nx - fx
+      const dy = norm.ny - fy
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < 0.02) {
+        onDraftNewRingComplete?.(current)
+        return
+      }
+    }
+    onDraftNewRingChange([...current, [norm.nx, norm.ny]])
+  }
 
   return (
     <div
@@ -236,7 +334,8 @@ export default function DashboardSnapshotView({
           draggable={false}
         />
         <svg
-          viewBox={`0 0 ${displayWidth} ${displayHeight}`}
+          ref={svgRef}
+          viewBox={`0 0 ${snapshot.width} ${snapshot.height}`}
           preserveAspectRatio="none"
           style={{
             position: 'absolute',
@@ -244,6 +343,11 @@ export default function DashboardSnapshotView({
             width: '100%',
             height: '100%',
           }}
+          onPointerDown={handleSvgPointerDown}
+          onPointerMove={handleSvgPointerMove}
+          onPointerUp={handleSvgPointerUp}
+          onPointerLeave={handleSvgPointerUp}
+          onPointerUpCapture={handleSvgTapToDraw}
         >
           {projectedFields.map(({ field, points, fill }) => (
             <polygon
@@ -253,10 +357,46 @@ export default function DashboardSnapshotView({
               fillOpacity={0.5}
               stroke="#1a3c34"
               strokeWidth={2}
-              onClick={() => onFieldSelect(field)}
+              onClick={(ev) => {
+                ev.stopPropagation()
+                handlePolygonActivate(field, points)
+              }}
               style={{ cursor: 'pointer' }}
             />
           ))}
+
+          {mode === 'draw_new_field' && (draftNewRingNorm?.length ?? 0) >= 1 && (
+            <polyline
+              points={ringNormToPixels(draftNewRingNorm ?? [], snapshot.width, snapshot.height)
+                .map((p) => `${p.x},${p.y}`)
+                .join(' ')}
+              fill="none"
+              stroke="#fff"
+              strokeWidth={2}
+            />
+          )}
+
+          {mode === 'edit_boundary' && selectedFieldId && selectedFieldPixels && (
+            <>
+              {selectedFieldPixels.map((p, idx) => (
+                <circle
+                  key={idx}
+                  cx={p.x}
+                  cy={p.y}
+                  r={6}
+                  fill="#fff"
+                  stroke="#1a3c34"
+                  strokeWidth={2}
+                  style={{ cursor: 'grab' }}
+                  onPointerDown={(ev) => {
+                    ev.stopPropagation()
+                    setDragVertexIdx(idx)
+                    svgRef.current?.setPointerCapture(ev.pointerId)
+                  }}
+                />
+              ))}
+            </>
+          )}
         </svg>
       </div>
     </div>
