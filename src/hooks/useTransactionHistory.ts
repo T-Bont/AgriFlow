@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFields } from '@/hooks/useFields'
-import type { Season, Transaction, TransactionCategory, TransactionType } from '@/types/database'
+import type { Season, Transaction } from '@/types/database'
 
 export interface TransactionHistoryItem extends Transaction {
   field_id: string
