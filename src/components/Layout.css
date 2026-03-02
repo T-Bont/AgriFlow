@@ -15,6 +15,12 @@
   gap: 12px;
 }
 
+.layout-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .layout-title {
   margin: 0;
   font-size: var(--font-heading);
@@ -24,6 +30,23 @@
 .layout-farm {
   font-size: 14px;
   opacity: 0.9;
+}
+
+.layout-logout-button {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.layout-logout-button:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: #fff;
 }
 
 .layout-nav {
