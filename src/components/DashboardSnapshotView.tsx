@@ -124,6 +124,15 @@ export default function DashboardSnapshotView({
   const [dragVertexIdx, setDragVertexIdx] = useState<number | null>(null)
 
   const toPixel = useMemo(() => createLonLatToPixel(snapshot), [snapshot])
+  const baseViewportSize = useMemo(() => {
+    const cw = containerSize.width || snapshot.width
+    const ch = containerSize.height || snapshot.height
+    const fit = Math.max(cw / Math.max(snapshot.width, 1), ch / Math.max(snapshot.height, 1))
+    return {
+      width: snapshot.width * fit,
+      height: snapshot.height * fit,
+    }
+  }, [containerSize.width, containerSize.height, snapshot.width, snapshot.height])
 
   useEffect(() => {
     const el = containerRef.current
@@ -152,17 +161,23 @@ export default function DashboardSnapshotView({
   }, [])
 
   useEffect(() => {
+    const cw = containerSize.width || baseViewportSize.width
+    const ch = containerSize.height || baseViewportSize.height
+    const centered = {
+      x: (cw - baseViewportSize.width) / 2,
+      y: (ch - baseViewportSize.height) / 2,
+    }
     setScale(1)
-    setOffset({ x: 0, y: 0 })
-  }, [snapshot.image_url])
+    setOffset(centered)
+  }, [snapshot.image_url, baseViewportSize.width, baseViewportSize.height, containerSize.width, containerSize.height])
 
   const clampOffset = (next: { x: number; y: number }, scaleOverride: number = scale) => {
-    const baseWidth = containerSize.width || snapshot.width
-    const baseHeight = containerSize.height || snapshot.height
+    const baseWidth = baseViewportSize.width
+    const baseHeight = baseViewportSize.height
     const imgWidth = baseWidth * scaleOverride
     const imgHeight = baseHeight * scaleOverride
-    const cw = containerSize.width || imgWidth
-    const ch = containerSize.height || imgHeight
+    const cw = containerSize.width || baseWidth
+    const ch = containerSize.height || baseHeight
     const minX = Math.min(0, cw - imgWidth)
     const maxX = 0
     const minY = Math.min(0, ch - imgHeight)
@@ -172,6 +187,10 @@ export default function DashboardSnapshotView({
       y: Math.max(minY, Math.min(maxY, next.y)),
     }
   }
+
+  useEffect(() => {
+    setOffset((prev) => clampOffset(prev))
+  }, [containerSize.width, containerSize.height, scale, baseViewportSize.width, baseViewportSize.height])
 
   const handleWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault()
@@ -429,8 +448,8 @@ export default function DashboardSnapshotView({
           position: 'absolute',
           left: 0,
           top: 0,
-          width: '100%',
-          height: '100%',
+          width: `${baseViewportSize.width}px`,
+          height: `${baseViewportSize.height}px`,
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
           transformOrigin: '0 0',
         }}
@@ -442,7 +461,6 @@ export default function DashboardSnapshotView({
             width: '100%',
             height: '100%',
             display: 'block',
-            objectFit: 'cover',
             userSelect: 'none',
             pointerEvents: 'none',
           }}
@@ -451,7 +469,7 @@ export default function DashboardSnapshotView({
         <svg
           ref={svgRef}
           viewBox={`0 0 ${snapshot.width} ${snapshot.height}`}
-          preserveAspectRatio="xMidYMid slice"
+          preserveAspectRatio="none"
           style={{
             position: 'absolute',
             inset: 0,
