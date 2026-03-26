@@ -46,6 +46,7 @@ const CROP_COLORS: Record<string, string> = {
 const PROFIT_COLORS = { positive: '#2d5a27', negative: '#b33' }
 
 type Point = { x: number; y: number }
+type TouchPoint = { clientX: number; clientY: number }
 
 function projectToWebMercator(lng: number, lat: number): Point {
   const clampedLat = Math.max(Math.min(lat, 85.05112878), -85.05112878)
@@ -225,13 +226,13 @@ export default function DashboardSnapshotView({
     }
   }
 
-  const distanceBetweenTouches = (a: Touch, b: Touch) => {
+  const distanceBetweenTouches = (a: TouchPoint, b: TouchPoint) => {
     const dx = a.clientX - b.clientX
     const dy = a.clientY - b.clientY
     return Math.sqrt(dx * dx + dy * dy)
   }
 
-  const midpointBetweenTouches = (a: Touch, b: Touch) => ({
+  const midpointBetweenTouches = (a: TouchPoint, b: TouchPoint) => ({
     x: (a.clientX + b.clientX) / 2,
     y: (a.clientY + b.clientY) / 2,
   })
