@@ -31,6 +31,12 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
+.mobile-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .satellite-dashboard-label {
   color: #fff;
   font-size: 14px;
@@ -48,6 +54,10 @@
 .satellite-dashboard-toggles button.active {
   background: var(--primary-light);
   border-color: var(--primary-light);
+}
+
+.satellite-edit-toggle {
+  display: none;
 }
 
 .satellite-dashboard-season {
@@ -217,7 +227,7 @@
   }
 
   .satellite-dashboard-map {
-    height: 42dvh;
+    height: 46dvh;
     min-height: 240px;
   }
 
@@ -229,6 +239,24 @@
 
   .satellite-dashboard-label {
     width: 100%;
+  }
+
+  .satellite-edit-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-min);
+  }
+
+  .mobile-edit-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mobile-edit-actions.hidden {
+    display: none;
   }
 
   .satellite-dashboard-toggles button,

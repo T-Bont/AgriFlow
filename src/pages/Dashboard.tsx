@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFields } from '@/hooks/useFields'
 import { useFieldPnl } from '@/hooks/useFieldPnl'
@@ -34,6 +34,8 @@ export default function Dashboard() {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
   const [editingRingNorm, setEditingRingNorm] = useState<number[][] | null>(null)
   const [draftStaticRingNorm, setDraftStaticRingNorm] = useState<number[][] | null>(null)
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
+  const [mobileEditOpen, setMobileEditOpen] = useState(false)
 
   const hasSnapshot = !!profile?.settings?.dashboard_snapshot
   const snapshot = profile?.settings?.dashboard_snapshot ?? null
@@ -94,6 +96,16 @@ export default function Dashboard() {
       Object.entries(withYear).map(([k, v]) => [k, { net_income: v.net_income }]),
     )
   }, [pnlRows, effectiveMapYear])
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)')
+    const onChange = () => setIsMobile(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  const showEditControls = !isMobile || mobileEditOpen
 
   const handleFieldSelect = (field: Field) => {
     navigate(`/field/${field.id}`)
@@ -191,18 +203,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard-page">
       <section className="satellite-dashboard" aria-label="Satellite map">
-        <div
-          className="satellite-dashboard-map"
-          style={
-            showSnapshot && snapshot
-              ? {
-                  height: 'auto',
-                  aspectRatio: `${snapshot.width} / ${snapshot.height}`,
-                  minHeight: 280,
-                }
-              : undefined
-          }
-        >
+        <div className="satellite-dashboard-map">
           {showSnapshot && snapshot ? (
             <DashboardSnapshotView
               snapshot={snapshot}
@@ -245,37 +246,48 @@ export default function Dashboard() {
           )}
         </div>
         <div className="satellite-dashboard-toggles">
-          <button
-            type="button"
-            className="btn-outline"
-            onClick={() => navigate('/map/edit')}
-          >
-            Edit field layout
-          </button>
-          <button
-            type="button"
-            className="btn-outline"
-            disabled={showSnapshot}
-            onClick={() => {
-              if (!showSnapshot) {
-                setDrawModeForNewField(true)
-              }
-            }}
-          >
-            Draw new field
-          </button>
-          <button
-            type="button"
-            className="btn-outline"
-            disabled={!showSnapshot}
-            onClick={() => {
-              setSnapshotMode('edit_boundary')
-              setSelectedFieldId(null)
-              setEditingRingNorm(null)
-            }}
-          >
-            Edit field boundary
-          </button>
+          {isMobile && (
+            <button
+              type="button"
+              className={`satellite-edit-toggle${mobileEditOpen ? ' active' : ''}`}
+              onClick={() => setMobileEditOpen((prev) => !prev)}
+            >
+              Edit
+            </button>
+          )}
+          <div className={`mobile-edit-actions${showEditControls ? '' : ' hidden'}`}>
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={() => navigate('/map/edit')}
+            >
+              Edit field layout
+            </button>
+            <button
+              type="button"
+              className="btn-outline"
+              disabled={showSnapshot}
+              onClick={() => {
+                if (!showSnapshot) {
+                  setDrawModeForNewField(true)
+                }
+              }}
+            >
+              Draw new field
+            </button>
+            <button
+              type="button"
+              className="btn-outline"
+              disabled={!showSnapshot}
+              onClick={() => {
+                setSnapshotMode('edit_boundary')
+                setSelectedFieldId(null)
+                setEditingRingNorm(null)
+              }}
+            >
+              Edit field boundary
+            </button>
+          </div>
           {snapshotMode !== 'view' && (
             <>
               <span className="satellite-dashboard-label">

@@ -114,6 +114,12 @@ export default function DashboardSnapshotView({
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef<{ x: number; y: number } | null>(null)
+  const pinchStartRef = useRef<{
+    distance: number
+    mid: { x: number; y: number }
+    scale: number
+    offset: { x: number; y: number }
+  } | null>(null)
   const [dragVertexIdx, setDragVertexIdx] = useState<number | null>(null)
 
   const toPixel = useMemo(() => createLonLatToPixel(snapshot), [snapshot])
@@ -195,6 +201,7 @@ export default function DashboardSnapshotView({
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (e.button !== 0) return
     if (mode !== 'view') return
+    if (pinchStartRef.current) return
     setIsPanning(true)
     panStartRef.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }
     // Capture on the container so we keep receiving move/up events even if the
@@ -215,6 +222,62 @@ export default function DashboardSnapshotView({
       e.currentTarget.releasePointerCapture(e.pointerId)
     } catch {
       // ignore
+    }
+  }
+
+  const distanceBetweenTouches = (a: Touch, b: Touch) => {
+    const dx = a.clientX - b.clientX
+    const dy = a.clientY - b.clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const midpointBetweenTouches = (a: Touch, b: Touch) => ({
+    x: (a.clientX + b.clientX) / 2,
+    y: (a.clientY + b.clientY) / 2,
+  })
+
+  const handleTouchStart: React.TouchEventHandler<HTMLDivElement> = (e) => {
+    if (mode !== 'view') return
+    if (e.touches.length !== 2) return
+    const [t1, t2] = [e.touches[0], e.touches[1]]
+    pinchStartRef.current = {
+      distance: distanceBetweenTouches(t1, t2),
+      mid: midpointBetweenTouches(t1, t2),
+      scale,
+      offset,
+    }
+    setIsPanning(false)
+    panStartRef.current = null
+  }
+
+  const handleTouchMove: React.TouchEventHandler<HTMLDivElement> = (e) => {
+    if (!pinchStartRef.current || e.touches.length !== 2) return
+    e.preventDefault()
+    const [t1, t2] = [e.touches[0], e.touches[1]]
+    const start = pinchStartRef.current
+    const distance = distanceBetweenTouches(t1, t2)
+    const mid = midpointBetweenTouches(t1, t2)
+    const nextScale = Math.min(4, Math.max(1, start.scale * (distance / Math.max(start.distance, 1e-6))))
+
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const startMidLocal = { x: start.mid.x - rect.left, y: start.mid.y - rect.top }
+    const midLocal = { x: mid.x - rect.left, y: mid.y - rect.top }
+    const contentX = (startMidLocal.x - start.offset.x) / Math.max(start.scale, 1e-6)
+    const contentY = (startMidLocal.y - start.offset.y) / Math.max(start.scale, 1e-6)
+    const nextOffset = {
+      x: midLocal.x - contentX * nextScale,
+      y: midLocal.y - contentY * nextScale,
+    }
+
+    setScale(nextScale)
+    setOffset(clampOffset(nextOffset, nextScale))
+  }
+
+  const handleTouchEnd: React.TouchEventHandler<HTMLDivElement> = (e) => {
+    if (e.touches.length < 2) {
+      pinchStartRef.current = null
     }
   }
 
@@ -345,6 +408,10 @@ export default function DashboardSnapshotView({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       style={{
         touchAction: 'none',
         position: 'absolute',
@@ -370,13 +437,20 @@ export default function DashboardSnapshotView({
         <img
           src={snapshot.image_url}
           alt="Farm dashboard snapshot"
-          style={{ width: '100%', height: '100%', display: 'block', userSelect: 'none', pointerEvents: 'none' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'block',
+            objectFit: 'cover',
+            userSelect: 'none',
+            pointerEvents: 'none',
+          }}
           draggable={false}
         />
         <svg
           ref={svgRef}
           viewBox={`0 0 ${snapshot.width} ${snapshot.height}`}
-          preserveAspectRatio="none"
+          preserveAspectRatio="xMidYMid slice"
           style={{
             position: 'absolute',
             inset: 0,
