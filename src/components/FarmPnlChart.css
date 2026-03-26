@@ -1,0 +1,30 @@
+.farm-chart {
+  background: var(--surface);
+  padding: 12px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.farm-chart-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.farm-chart-summary .positive {
+  color: #2d5a27;
+}
+
+.farm-chart-summary .negative {
+  color: #b33;
+}
+
+.farm-chart-empty {
+  padding: 24px;
+  text-align: center;
+  background: var(--surface);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 14px;
+}

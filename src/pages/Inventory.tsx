@@ -30,7 +30,7 @@ export default function Inventory() {
       </p>
       <section className="inventory-battery-list" aria-label="Cross-season inventory">
         {groups.map((g) => {
-          const total = g.totalHarvested > 0 ? g.totalHarvested : 1000
+          const total = g.totalHarvested
           const soldContracted = g.totalSold + g.totalContracted
           const soldPct = total > 0 ? (soldContracted / total) * 100 : 0
           const unsoldPct = total > 0 ? (g.unsold / total) * 100 : 0
@@ -54,7 +54,6 @@ export default function Inventory() {
               <div className="inventory-battery-stats">
                 <span className="inventory-stat">
                   Total: <strong>{total.toLocaleString()} bu</strong>
-                  {g.totalHarvested === 0 && <em> (default)</em>}
                 </span>
                 <span className="inventory-stat sold">
                   Sold/Contracted: <strong>{soldContracted.toLocaleString()} bu</strong>

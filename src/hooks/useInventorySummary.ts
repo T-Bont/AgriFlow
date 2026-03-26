@@ -4,8 +4,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useFields } from '@/hooks/useFields'
 import type { Season, Transaction, Contract, CropType } from '@/types/database'
 
-const DEFAULT_PREHARVEST_BU = 1000
-
 export interface InventoryGroup {
   cropType: CropType
   year: number
@@ -116,8 +114,7 @@ export function useInventorySummary() {
       g.totalContracted += c.quantity_bushels
     }
     for (const g of byKey.values()) {
-      const total = g.totalHarvested > 0 ? g.totalHarvested : DEFAULT_PREHARVEST_BU
-      g.unsold = Math.max(0, total - g.totalSold - g.totalContracted)
+      g.unsold = Math.max(0, g.totalHarvested - g.totalSold - g.totalContracted)
     }
     const order: CropType[] = ['Corn', 'Soy', 'Wheat', 'Other']
     return [...byKey.values()].sort((a, b) => {

@@ -10,6 +10,7 @@ import FieldDetail from '@/pages/FieldDetail'
 import LogPage from '@/pages/LogPage'
 import Inventory from '@/pages/Inventory'
 import TransactionHistory from '@/pages/TransactionHistory'
+import Financials from '@/pages/Financials'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -49,6 +50,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="map/edit" element={<MapEditLayoutView />} />
           <Route path="inventory" element={<Inventory />} />
+          <Route path="financials" element={<Financials />} />
           <Route path="transactions" element={<TransactionHistory />} />
           <Route path="field/:fieldId" element={<FieldDetail />} />
           <Route path="field/:fieldId/log" element={<LogPage />} />

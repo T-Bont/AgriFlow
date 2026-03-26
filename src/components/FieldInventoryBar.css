@@ -44,3 +44,7 @@
   color: #c9761e;
 }
 
+.field-inventory-stat.share strong {
+  color: var(--primary);
+}
+

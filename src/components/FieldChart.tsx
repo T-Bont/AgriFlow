@@ -76,7 +76,13 @@ export default function FieldChart({ seasonId, pnlRows }: FieldChartProps) {
           <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-          <Tooltip formatter={(v: number) => [`$${Number(v).toLocaleString()}`, '']} />
+          <Tooltip
+            shared={false}
+            formatter={(value: number, name: string) => [
+              `$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+              name,
+            ]}
+          />
           <Legend />
           <Bar dataKey="value" name="Income" fill="#2d5a27" radius={[4, 4, 0, 0]} />
           {expenseCategoriesUsed.map((cat) => (

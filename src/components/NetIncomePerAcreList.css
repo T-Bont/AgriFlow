@@ -1,0 +1,30 @@
+.leaderboard {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.leaderboard li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  box-shadow: var(--shadow);
+}
+
+.leaderboard-name {
+  font-weight: 500;
+}
+
+.leaderboard .positive {
+  color: #2d5a27;
+  font-weight: 600;
+}
+
+.leaderboard .negative {
+  color: #b33;
+  font-weight: 600;
+}

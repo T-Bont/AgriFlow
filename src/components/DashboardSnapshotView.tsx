@@ -47,6 +47,7 @@ const PROFIT_COLORS = { positive: '#2d5a27', negative: '#b33' }
 
 type Point = { x: number; y: number }
 type TouchPoint = { clientX: number; clientY: number }
+const PAN_START_THRESHOLD_PX = 5
 
 function projectToWebMercator(lng: number, lat: number): Point {
   const clampedLat = Math.max(Math.min(lat, 85.05112878), -85.05112878)
@@ -113,8 +114,14 @@ export default function DashboardSnapshotView({
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
-  const [isPanning, setIsPanning] = useState(false)
-  const panStartRef = useRef<{ x: number; y: number } | null>(null)
+  const panStartRef = useRef<{
+    pointerId: number
+    downClientX: number
+    downClientY: number
+    startOffsetX: number
+    startOffsetY: number
+  } | null>(null)
+  const panMovedRef = useRef(false)
   const pinchStartRef = useRef<{
     distance: number
     mid: { x: number; y: number }
@@ -220,23 +227,43 @@ export default function DashboardSnapshotView({
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (e.button !== 0) return
+    if (e.pointerType === 'mouse') return
     if (mode !== 'view') return
     if (pinchStartRef.current) return
-    setIsPanning(true)
-    panStartRef.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }
+    panStartRef.current = {
+      pointerId: e.pointerId,
+      downClientX: e.clientX,
+      downClientY: e.clientY,
+      startOffsetX: offset.x,
+      startOffsetY: offset.y,
+    }
+    panMovedRef.current = false
     // Capture on the container so we keep receiving move/up events even if the
     // drag started on an SVG element (polygon/circle) inside the container.
     e.currentTarget.setPointerCapture(e.pointerId)
   }
 
   const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
-    if (!isPanning || !panStartRef.current) return
-    const next = { x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y }
+    if (!panStartRef.current) return
+    if (e.pointerId !== panStartRef.current.pointerId) return
+    const dxFromDown = e.clientX - panStartRef.current.downClientX
+    const dyFromDown = e.clientY - panStartRef.current.downClientY
+    const movedDistance = Math.hypot(dxFromDown, dyFromDown)
+    if (!panMovedRef.current && movedDistance < PAN_START_THRESHOLD_PX) {
+      return
+    }
+    if (!panMovedRef.current) {
+      panMovedRef.current = true
+    }
+    const next = {
+      x: panStartRef.current.startOffsetX + dxFromDown,
+      y: panStartRef.current.startOffsetY + dyFromDown,
+    }
     setOffset(clampOffset(next))
   }
 
   const handlePointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
-    setIsPanning(false)
+    if (panStartRef.current && e.pointerId !== panStartRef.current.pointerId) return
     panStartRef.current = null
     try {
       e.currentTarget.releasePointerCapture(e.pointerId)
@@ -266,7 +293,6 @@ export default function DashboardSnapshotView({
       scale,
       offset,
     }
-    setIsPanning(false)
     panStartRef.current = null
   }
 
@@ -492,6 +518,7 @@ export default function DashboardSnapshotView({
               strokeWidth={polygonStrokeWidth}
               vectorEffect="non-scaling-stroke"
               onClick={(ev) => {
+                if (panMovedRef.current) return
                 ev.stopPropagation()
                 handlePolygonActivate(field, points)
               }}

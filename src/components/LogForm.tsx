@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { TransactionCategory, TransactionType } from '@/types/database'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useProfile } from '@/hooks/useProfile'
@@ -6,8 +6,6 @@ import { usePicklists } from '@/hooks/usePicklists'
 import { mergeAndSavePicklists } from '@/lib/picklists'
 import { useToast } from '@/stores/toast'
 import './LogForm.css'
-
-const DEFAULT_PREHARVEST_BU = 1000
 
 const CATEGORIES: { value: TransactionCategory; label: string }[] = [
   { value: 'Harvest', label: 'Harvest' },
@@ -51,8 +49,10 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
   const [productName, setProductName] = useState('')
   const [applicationStage, setApplicationStage] = useState('')
   const [weatherNotes, setWeatherNotes] = useState('')
-  const [nPerc, setNPerc] = useState('')
+  const [nAnalysis, setNAnalysis] = useState('')
   const [totalLbs, setTotalLbs] = useState('')
+  const [actualNPerAcre, setActualNPerAcre] = useState('')
+  const [actualNPerAcreManual, setActualNPerAcreManual] = useState(false)
   const [grossWeight, setGrossWeight] = useState('')
   const [tareWeight, setTareWeight] = useState('')
   const [netWeight, setNetWeight] = useState('')
@@ -88,6 +88,23 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
 
   const safeApplicationStages = Array.isArray(applicationStages) ? applicationStages : []
   const allApplicationStages = [...new Set([...DEFAULT_APPLICATION_STAGES, ...safeApplicationStages])]
+
+  const parsedNitrogenPercent = (() => {
+    const firstToken = nAnalysis.split('-')[0]?.trim() ?? ''
+    const parsed = Number.parseFloat(firstToken)
+    return Number.isFinite(parsed) ? parsed : null
+  })()
+
+  useEffect(() => {
+    if (actualNPerAcreManual) return
+    if (parsedNitrogenPercent == null || !totalLbs || fieldAcres == null || fieldAcres <= 0) {
+      setActualNPerAcre('')
+      return
+    }
+    const totalN = (parsedNitrogenPercent / 100) * (Number.parseFloat(totalLbs) || 0)
+    const computed = totalN / fieldAcres
+    setActualNPerAcre(Number.isFinite(computed) ? computed.toFixed(2) : '')
+  }, [actualNPerAcreManual, fieldAcres, parsedNitrogenPercent, totalLbs])
 
   const handleAddGovProgram = async () => {
     const name = newGovProgram.trim()
@@ -195,14 +212,18 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
       const alreadySoldBu = transactions
         .filter((t) => t.category === 'Grain Sale' && t.unit === 'bu' && t.quantity != null)
         .reduce((sum, t) => sum + (t.quantity ?? 0), 0)
-      const totalAvailable = harvestedBu > 0 ? harvestedBu : DEFAULT_PREHARVEST_BU
+      const totalAvailable = harvestedBu
       const remaining = totalAvailable - alreadySoldBu
       if (sold > remaining) {
+        const guidance =
+          harvestedBu <= 0
+            ? 'Log a harvest for this season before recording grain sales.'
+            : `Cannot sell ${sold.toLocaleString()} bu. You have only ${Math.max(
+                0,
+                remaining,
+              ).toLocaleString()} bu available for this season.`
         showToast(
-          `Cannot sell ${sold.toLocaleString()} bu. You have only ${Math.max(
-            0,
-            remaining,
-          ).toLocaleString()} bu available for this season.`,
+          guidance,
         )
         return
       }
@@ -223,12 +244,17 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
       if (productName) meta.product_name = productName
       if (applicationStage) meta.application_stage = applicationStage
       if (weatherNotes) meta.weather_notes = weatherNotes
-      if (nPerc && totalLbs) {
-        const totalN = (parseFloat(nPerc) / 100) * parseFloat(totalLbs)
-        const acres = fieldAcres ?? undefined
+      if (parsedNitrogenPercent != null && totalLbs) {
+        const totalN = (parsedNitrogenPercent / 100) * parseFloat(totalLbs)
+        const acres = fieldAcres ?? null
+        const derivedNPerAcre = acres != null && acres > 0 ? totalN / acres : undefined
+        const overrideNPerAcre = actualNPerAcre !== '' ? Number.parseFloat(actualNPerAcre) : undefined
         meta.nutrient_analysis = {
           n_actual: totalN,
-          actual_n_per_acre: acres != null && acres > 0 ? totalN / acres : undefined,
+          actual_n_per_acre:
+            overrideNPerAcre != null && Number.isFinite(overrideNPerAcre)
+              ? overrideNPerAcre
+              : derivedNPerAcre,
           p: 0,
           k: 0,
         }
@@ -390,15 +416,20 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
           </label>
           <div className="log-form-row">
             <label>
-              <span>N % (e.g. 46)</span>
+              <span>N (e.g. 46-0-0)</span>
               <input
-                type="number"
-                step="0.1"
-                inputMode="decimal"
-                value={nPerc}
-                onChange={(e) => setNPerc(e.target.value)}
+                type="text"
+                inputMode="text"
+                value={nAnalysis}
+                onChange={(e) => {
+                  setNAnalysis(e.target.value)
+                  if (actualNPerAcreManual) setActualNPerAcreManual(false)
+                }}
+                placeholder="46-0-0"
               />
             </label>
+          </div>
+          <div className="log-form-row">
             <label>
               <span>Total lbs</span>
               <input
@@ -407,6 +438,19 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
                 inputMode="decimal"
                 value={totalLbs}
                 onChange={(e) => setTotalLbs(e.target.value)}
+              />
+            </label>
+            <label>
+              <span>Actual N per acre (lbs)</span>
+              <input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                value={actualNPerAcre}
+                onChange={(e) => {
+                  setActualNPerAcre(e.target.value)
+                  setActualNPerAcreManual(true)
+                }}
               />
             </label>
           </div>

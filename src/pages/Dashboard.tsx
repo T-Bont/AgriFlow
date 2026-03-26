@@ -359,32 +359,6 @@ export default function Dashboard() {
       </section>
       <section className="dashboard">
         <div className="dashboard-content">
-        {pnlRowsForSeason.length > 0 && (
-          <section className="dashboard-section dashboard-leaderboard">
-            <h2>Net income per acre</h2>
-            <ul className="leaderboard">
-              {(() => {
-                const withPerAcre = pnlRowsForSeason.filter((r) => r.net_income_per_acre != null)
-                const sorted = withPerAcre.length > 0
-                  ? [...withPerAcre].sort((a, b) => (b.net_income_per_acre ?? 0) - (a.net_income_per_acre ?? 0))
-                  : [...pnlRowsForSeason].sort((a, b) => b.net_income - a.net_income)
-                return sorted.slice(0, 5).map((r) => (
-                  <li key={r.season_id}>
-                    <span className="leaderboard-name">{r.field_name}</span>
-                    <span className={(r.net_income_per_acre ?? r.net_income) >= 0 ? 'positive' : 'negative'}>
-                      {r.net_income_per_acre != null
-                        ? `$${r.net_income_per_acre.toLocaleString(undefined, { maximumFractionDigits: 0 })}/ac`
-                        : `$${r.net_income.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                    </span>
-                  </li>
-                ))
-              })()}
-            </ul>
-            {pnlRowsForSeason.every((r) => r.net_income_per_acre == null) && pnlRowsForSeason.length > 0 && (
-              <p className="muted">Add acres to fields to see net income per acre.</p>
-            )}
-          </section>
-        )}
         <section className="dashboard-section">
           <h2>Fields</h2>
           {fieldsLoading ? (

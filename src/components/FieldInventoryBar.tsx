@@ -3,8 +3,6 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { useFieldPnl } from '@/hooks/useFieldPnl'
 import './FieldInventoryBar.css'
 
-const DEFAULT_PREHARVEST_BU = 1000
-
 interface FieldInventoryBarProps {
   seasonId: string
 }
@@ -20,7 +18,7 @@ export default function FieldInventoryBar({ seasonId }: FieldInventoryBarProps) 
       .filter((t) => t.category === 'Harvest' && t.unit === 'bu' && t.quantity != null)
       .reduce((sum, t) => sum + (t.quantity ?? 0), 0)
     const harvested = harvestedFromView || harvestedFromTx
-    const totalHarvested = harvested > 0 ? harvested : DEFAULT_PREHARVEST_BU
+    const totalHarvested = harvested
     const soldBu = transactions
       .filter((t) => t.category === 'Grain Sale' && t.unit === 'bu' && t.quantity != null)
       .reduce((sum, t) => sum + (t.quantity ?? 0), 0)
@@ -46,6 +44,8 @@ export default function FieldInventoryBar({ seasonId }: FieldInventoryBarProps) 
 
   const soldPct = total > 0 ? (sold / total) * 100 : 0
   const unsoldPct = total > 0 ? (unsold / total) * 100 : 0
+  const userSharePct = Math.max(0, Math.min(100, 100 - (row?.landlord_share_percent ?? 0)))
+  const buPerAcre = row?.field_acres != null && row.field_acres > 0 ? total / row.field_acres : null
 
   return (
     <div className="field-inventory">
@@ -66,9 +66,14 @@ export default function FieldInventoryBar({ seasonId }: FieldInventoryBarProps) 
       <div className="field-inventory-stats">
         <span className="field-inventory-stat">
           Total: <strong>{total.toLocaleString()} bu</strong>
-          {row?.total_harvested_bushels == null && (
-            <em> (default)</em>
-          )}
+        </span>
+        <span className="field-inventory-stat">
+          bu/acre:{' '}
+          <strong>
+            {buPerAcre != null
+              ? buPerAcre.toLocaleString(undefined, { maximumFractionDigits: 1 })
+              : '—'}
+          </strong>
         </span>
         <span className="field-inventory-stat sold">
           Sold: <strong>{sold.toLocaleString()} bu</strong>
@@ -77,6 +82,9 @@ export default function FieldInventoryBar({ seasonId }: FieldInventoryBarProps) 
         <span className="field-inventory-stat unsold">
           Unsold: <strong>{unsold.toLocaleString()} bu</strong>
           {total > 0 && ` (${unsoldPct.toFixed(0)}%)`}
+        </span>
+        <span className="field-inventory-stat share">
+          Share: <strong>{userSharePct.toFixed(0)}%</strong>
         </span>
       </div>
     </div>
