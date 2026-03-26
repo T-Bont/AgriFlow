@@ -38,3 +38,25 @@
 .transaction-amount.expense {
   color: #b33;
 }
+
+@media (max-width: 768px) {
+  .transaction-list-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+
+  .transaction-date {
+    width: auto;
+    font-size: 12px;
+  }
+
+  .transaction-category {
+    min-width: 0;
+  }
+
+  .transaction-quantity,
+  .transaction-amount {
+    margin-left: auto;
+  }
+}

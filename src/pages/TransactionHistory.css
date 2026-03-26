@@ -14,6 +14,34 @@
   .transaction-history-layout {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .th-item button {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+
+  .th-date {
+    width: auto;
+    font-size: 12px;
+  }
+
+  .th-main {
+    min-width: 0;
+  }
+
+  .th-amount {
+    margin-left: auto;
+  }
+
+  .th-detail-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .th-detail-row dd {
+    text-align: left;
+  }
 }
 
 .transaction-history-list {

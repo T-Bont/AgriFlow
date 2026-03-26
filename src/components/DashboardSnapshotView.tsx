@@ -119,6 +119,19 @@ export default function DashboardSnapshotView({
   const toPixel = useMemo(() => createLonLatToPixel(snapshot), [snapshot])
 
   useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    // Prevent page scroll when zooming/panning inside the snapshot view.
+    // React wheel events may be passive in some environments, so use a native listener.
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
+  useEffect(() => {
     if (!containerRef.current) return
     const el = containerRef.current
     const updateSize = () => {
@@ -136,11 +149,11 @@ export default function DashboardSnapshotView({
     setOffset({ x: 0, y: 0 })
   }, [snapshot.image_url])
 
-  const clampOffset = (next: { x: number; y: number }) => {
+  const clampOffset = (next: { x: number; y: number }, scaleOverride: number = scale) => {
     const baseWidth = containerSize.width || snapshot.width
     const baseHeight = containerSize.height || snapshot.height
-    const imgWidth = baseWidth * scale
-    const imgHeight = baseHeight * scale
+    const imgWidth = baseWidth * scaleOverride
+    const imgHeight = baseHeight * scaleOverride
     const cw = containerSize.width || imgWidth
     const ch = containerSize.height || imgHeight
     const minX = Math.min(0, cw - imgWidth)
@@ -155,12 +168,28 @@ export default function DashboardSnapshotView({
 
   const handleWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault()
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const cursorX = e.clientX - rect.left
+    const cursorY = e.clientY - rect.top
+
     const delta = -e.deltaY
     const zoomFactor = delta > 0 ? 1.1 : 0.9
     const nextScale = Math.min(3, Math.max(1, scale * zoomFactor))
     if (nextScale === scale) return
+
+    // Zoom towards cursor: keep the content point under the cursor stationary.
+    const contentX = (cursorX - offset.x) / (scale || 1e-9)
+    const contentY = (cursorY - offset.y) / (scale || 1e-9)
+    const nextOffset = {
+      x: cursorX - contentX * nextScale,
+      y: cursorY - contentY * nextScale,
+    }
+
     setScale(nextScale)
-    setOffset((prev) => clampOffset(prev))
+    setOffset(clampOffset(nextOffset, nextScale))
   }
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
@@ -168,7 +197,9 @@ export default function DashboardSnapshotView({
     if (mode !== 'view') return
     setIsPanning(true)
     panStartRef.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    // Capture on the container so we keep receiving move/up events even if the
+    // drag started on an SVG element (polygon/circle) inside the container.
+    e.currentTarget.setPointerCapture(e.pointerId)
   }
 
   const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
@@ -180,7 +211,11 @@ export default function DashboardSnapshotView({
   const handlePointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
     setIsPanning(false)
     panStartRef.current = null
-    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
   }
 
   const getEventNorm = (e: React.PointerEvent) => {
@@ -238,6 +273,11 @@ export default function DashboardSnapshotView({
     if (!ringNorm) return null
     return ringNormToPixels(ringNorm, snapshot.width, snapshot.height)
   }, [selectedFieldId, editingRingNorm, staticBoundariesByFieldId, snapshot.width, snapshot.height])
+  const zoomSafeScale = Math.max(scale, 1e-6)
+  const polygonStrokeWidth = 2 / zoomSafeScale
+  const drawLineStrokeWidth = 2 / zoomSafeScale
+  const editHandleRadius = 6 / zoomSafeScale
+  const editHandleStrokeWidth = 2 / zoomSafeScale
 
   const handlePolygonActivate = (field: Field, points: Point[]) => {
     if (mode === 'view') {
@@ -324,7 +364,7 @@ export default function DashboardSnapshotView({
           width: '100%',
           height: '100%',
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-          transformOrigin: 'center center',
+          transformOrigin: '0 0',
         }}
       >
         <img
@@ -356,7 +396,8 @@ export default function DashboardSnapshotView({
               fill={fill}
               fillOpacity={0.5}
               stroke="#1a3c34"
-              strokeWidth={2}
+              strokeWidth={polygonStrokeWidth}
+              vectorEffect="non-scaling-stroke"
               onClick={(ev) => {
                 ev.stopPropagation()
                 handlePolygonActivate(field, points)
@@ -372,7 +413,8 @@ export default function DashboardSnapshotView({
                 .join(' ')}
               fill="none"
               stroke="#fff"
-              strokeWidth={2}
+              strokeWidth={drawLineStrokeWidth}
+              vectorEffect="non-scaling-stroke"
             />
           )}
 
@@ -383,10 +425,11 @@ export default function DashboardSnapshotView({
                   key={idx}
                   cx={p.x}
                   cy={p.y}
-                  r={6}
+                  r={editHandleRadius}
                   fill="#fff"
                   stroke="#1a3c34"
-                  strokeWidth={2}
+                  strokeWidth={editHandleStrokeWidth}
+                  vectorEffect="non-scaling-stroke"
                   style={{ cursor: 'grab' }}
                   onPointerDown={(ev) => {
                     ev.stopPropagation()

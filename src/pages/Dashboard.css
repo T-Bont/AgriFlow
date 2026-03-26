@@ -210,3 +210,29 @@
   color: #b33;
   font-weight: 600;
 }
+
+@media (max-width: 768px) {
+  .satellite-dashboard {
+    min-height: 320px;
+  }
+
+  .satellite-dashboard-map {
+    height: 42dvh;
+    min-height: 240px;
+  }
+
+  .satellite-dashboard-toggles {
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .satellite-dashboard-label {
+    width: 100%;
+  }
+
+  .satellite-dashboard-toggles button,
+  .satellite-dashboard-season {
+    min-height: var(--touch-min);
+  }
+}

@@ -189,6 +189,23 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   }, [initialCenter[0], initialCenter[1], initialZoom])
 
   useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    // Prevent the dashboard page from scrolling when the cursor is over the map,
+    // but allow Mapbox to still handle the wheel event for zooming.
+    const onWheel = (e: WheelEvent) => {
+      if (!mapRef.current) return
+      e.preventDefault()
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!loaded || !mapRef.current) return
     if (!northUp2D) return
     const map = mapRef.current
@@ -355,7 +372,11 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   }
 
   return (
-    <div ref={containerRef} className="map-container" style={{ width: '100%', height: '100%', minHeight: 280 }} />
+    <div
+      ref={containerRef}
+      className="map-container"
+      style={{ width: '100%', height: '100%', minHeight: 280, touchAction: 'pan-x pan-y' }}
+    />
   )
 })
 

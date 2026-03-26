@@ -82,6 +82,66 @@
   position: relative;
 }
 
+@media (max-width: 768px) {
+  .layout {
+    min-height: 100dvh;
+  }
+
+  .layout-header {
+    padding: 10px 12px;
+  }
+
+  .layout-title {
+    font-size: 20px;
+  }
+
+  .layout-farm {
+    font-size: 12px;
+  }
+
+  .layout-logout-button {
+    min-height: var(--touch-min);
+    padding: 8px 12px;
+  }
+
+  .layout-main {
+    order: 2;
+    padding-bottom: calc(var(--touch-min) + env(safe-area-inset-bottom));
+  }
+
+  .layout-nav {
+    order: 3;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    gap: 0;
+    padding: 0;
+    background: var(--surface);
+    border-bottom: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .layout-nav-link {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-min);
+    padding: 12px 8px;
+    border-bottom: none;
+    border-top: 2px solid transparent;
+  }
+
+  .layout-nav-link.active {
+    border-top-color: var(--primary);
+  }
+
+  .toast {
+    bottom: calc(var(--touch-min) + 24px + env(safe-area-inset-bottom));
+  }
+}
+
 .loading-screen {
   display: flex;
   align-items: center;
