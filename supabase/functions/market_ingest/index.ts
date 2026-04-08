@@ -9,6 +9,15 @@ const corsHeaders = {
 const PRODUCER_AG_URL = 'https://www.producerag.com/locations/buhler'
 const PRODUCER_AG_CASHBIDS_URL =
   'https://tmagrain.agricharts.com/inc/cashbids/cashbids-js.php?filter=location&location=2999&commodity=&groupby=location&width=&showchart=1&hidenav=1&format=table&fields=name%2Cbasismonth%2Cfutures%2Cfutureschange%2Cbasis%2Cprice%2Cnotes%2C&groupheading=table&bidsort=commodity&dateformat=%25m%2F%25d%2F%25Y&months=8&noscript=1&acCnt=1'
+const ADM_COMMODITY_SOURCES = [
+  { crop: 'Corn', commodity: '02', url: 'https://adm.gradable.com/market/Hutchinson--KS?commodity=02' },
+  { crop: 'Soybeans', commodity: '01', url: 'https://adm.gradable.com/market/Hutchinson--KS?commodity=01' },
+  { crop: 'Wheat', commodity: '16', url: 'https://adm.gradable.com/market/Hutchinson--KS?commodity=16' },
+  { crop: 'Milo', commodity: '37', url: 'https://adm.gradable.com/market/Hutchinson--KS?commodity=37' },
+] as const
+const ADM_MARKET_ID = '331847185'
+const ADM_MARKET_URL = 'https://adm.gradable.com/market/Hutchinson--KS'
+const ADM_INSTRUMENTS_URL = `https://adm.gradable.com/api/commodities/v2/merchandising/instruments/market/${ADM_MARKET_ID}?offer_type=public`
 const YAHOO_TICKERS = [
   { ticker: 'ZC=F', crop: 'Corn' },
   { ticker: 'ZS=F', crop: 'Soybeans' },
@@ -23,6 +32,7 @@ type LocalBidRow = {
   basis: number | null
   cash_price: number | null
   note: string | null
+  source_url?: string
 }
 
 function parseMoney(input: string | null | undefined): number | null {
@@ -101,6 +111,44 @@ function parseFractionalFutures(input: string | null | undefined): number | null
   return whole / 100 + frac / 800
 }
 
+function normalizeBasisValue(value: number | null): number | null {
+  if (value == null) return null
+  // ADM sometimes presents basis as cents (-54) instead of dollars (-0.54).
+  if (Math.abs(value) > 10) return value / 100
+  return value
+}
+
+function parseOptionMonthCode(optionMonth: string | null | undefined): string | null {
+  if (!optionMonth) return null
+  const monthMap: Record<string, string> = {
+    F: 'Jan',
+    G: 'Feb',
+    H: 'Mar',
+    J: 'Apr',
+    K: 'May',
+    M: 'Jun',
+    N: 'Jul',
+    Q: 'Aug',
+    U: 'Sep',
+    V: 'Oct',
+    X: 'Nov',
+    Z: 'Dec',
+  }
+  const trimmed = optionMonth.trim().toUpperCase()
+  const match = trimmed.match(/^[A-Z]{2}([FGHJKMNQUVXZ])(\d)$/)
+  if (!match) return optionMonth
+  const month = monthMap[match[1]]
+  if (!month) return optionMonth
+  const yearDigit = Number.parseInt(match[2], 10)
+  if (!Number.isFinite(yearDigit)) return optionMonth
+  const now = new Date()
+  const currentYear = now.getUTCFullYear()
+  let year = Math.floor(currentYear / 10) * 10 + yearDigit
+  if (year < currentYear - 2) year += 10
+  if (year > currentYear + 7) year -= 10
+  return `${month} ${year}`
+}
+
 function parseAgrichartsPayload(payload: string): LocalBidRow[] {
   const match = payload.match(/var bids = (\[.*?\]);var config =/s)
   if (!match) return []
@@ -124,6 +172,42 @@ function parseAgrichartsPayload(payload: string): LocalBidRow[] {
         note: bid.notes ? String(bid.notes) : null,
       })
     }
+  }
+  return rows
+}
+
+type AdmInstrument = {
+  ext_commodity_id?: string
+  option_month?: string | null
+  futures_bid?: number | null
+  basis_bid?: number | null
+  cash_bid?: number | null
+  display_name?: string | null
+  delivery_period_start?: number | null
+}
+
+type AdmInstrumentsResponse = {
+  instruments?: AdmInstrument[]
+}
+
+function parseAdmApiRows(payload: AdmInstrumentsResponse): LocalBidRow[] {
+  const instruments = payload.instruments ?? []
+  const rows: LocalBidRow[] = []
+  for (const source of ADM_COMMODITY_SOURCES) {
+    const matches = instruments
+      .filter((item) => String(item.ext_commodity_id ?? '') === source.commodity)
+      .sort((a, b) => (a.delivery_period_start ?? Number.MAX_SAFE_INTEGER) - (b.delivery_period_start ?? Number.MAX_SAFE_INTEGER))
+    const first = matches[0]
+    if (!first) continue
+    rows.push({
+      crop: source.crop,
+      basis_month: parseOptionMonthCode(first.option_month ?? null),
+      futures_price: typeof first.futures_bid === 'number' ? first.futures_bid : null,
+      basis: normalizeBasisValue(typeof first.basis_bid === 'number' ? first.basis_bid : null),
+      cash_price: typeof first.cash_bid === 'number' ? first.cash_bid : null,
+      note: first.display_name ?? 'FIRST_ROW',
+      source_url: source.url,
+    })
   }
   return rows
 }
@@ -204,6 +288,63 @@ async function runIngest() {
       rowsWritten += currentRows.length
     }
 
+    const admErrors: string[] = []
+    let admRows: LocalBidRow[] = []
+    try {
+      const admResp = await fetch(ADM_INSTRUMENTS_URL, {
+        headers: {
+          'User-Agent': 'AgriFlowMarketIngest/1.0',
+          Referer: `${ADM_MARKET_URL}/`,
+          Accept: 'application/json',
+        },
+      })
+      if (!admResp.ok) {
+        throw new Error(`ADM API fetch failed: ${admResp.status}`)
+      }
+      const payload = (await admResp.json()) as AdmInstrumentsResponse
+      admRows = parseAdmApiRows(payload)
+      if (admRows.length === 0) {
+        admErrors.push('ADM API returned 0 mapped rows')
+      }
+    } catch (error) {
+      admErrors.push(`ADM API exception: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    if (admRows.length > 0) {
+      const admRawRows = admRows.map((row) => ({
+        location_slug: 'adm-hutchinson',
+        crop: row.crop,
+        basis_month: row.basis_month,
+        futures_price: row.futures_price,
+        basis: row.basis,
+        cash_price: row.cash_price,
+        note: row.note,
+        source_url: row.source_url ?? 'https://adm.gradable.com/market/Hutchinson--KS',
+        observed_at: nowIso,
+        scraped_at: nowIso,
+        raw_payload: row,
+      }))
+      const { error: admRawErr } = await supabase.from('market_local_bids_raw').insert(admRawRows as never)
+      if (admRawErr) throw new Error(`Failed writing ADM raw bids: ${admRawErr.message}`)
+      rowsWritten += admRawRows.length
+
+      const admCurrentRows = admRows.map((row) => ({
+        location_slug: 'adm-hutchinson',
+        crop: row.crop,
+        basis_month: row.basis_month,
+        futures_price: row.futures_price,
+        basis: row.basis,
+        cash_price: row.cash_price ?? (row.futures_price != null && row.basis != null ? row.futures_price + row.basis : null),
+        note: row.note,
+        source_url: row.source_url ?? 'https://adm.gradable.com/market/Hutchinson--KS',
+        last_updated: nowIso,
+      }))
+      const { error: admCurrentErr } = await supabase
+        .from('market_local_bids_current')
+        .upsert(admCurrentRows as never, { onConflict: 'location_slug,crop' })
+      if (admCurrentErr) throw new Error(`Failed upserting ADM current bids: ${admCurrentErr.message}`)
+      rowsWritten += admCurrentRows.length
+    }
+
     for (const item of YAHOO_TICKERS) {
       for (const interval of YAHOO_INTERVALS) {
         const range = interval === '1m' ? '1d' : interval === '5m' ? '5d' : interval === '1h' ? '1mo' : '1y'
@@ -253,7 +394,16 @@ async function runIngest() {
     const finishedAt = new Date().toISOString()
     await supabase
       .from('market_sync_runs')
-      .update({ status: 'success', finished_at: finishedAt, rows_written: rowsWritten } as never)
+      .update({
+        status: 'success',
+        finished_at: finishedAt,
+        rows_written: rowsWritten,
+        meta: {
+          location: 'buhler',
+          adm_rows: admRows.length,
+          ...(admErrors.length > 0 ? { adm_errors: admErrors } : {}),
+        },
+      } as never)
       .eq('id', runId)
 
     return { runId, rowsWritten, finishedAt }

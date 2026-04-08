@@ -11,6 +11,10 @@
   gap: 10px;
 }
 
+.market-table-title {
+  margin: 4px 0 0;
+}
+
 .market-section-header {
   display: flex;
   align-items: baseline;

@@ -14,6 +14,16 @@ const CROP_OPTIONS = [
 ] as const
 
 const TIMEFRAMES: MarketTimeframe[] = ['1D', '5D', '1M', '3M', '6M', '1Y']
+const centralFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Chicago',
+  month: '2-digit',
+  day: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+  timeZoneName: 'short',
+})
 
 function formatPrice(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return '—'
@@ -31,11 +41,23 @@ export default function Market() {
   const [timeframe, setTimeframe] = useState<MarketTimeframe>('1M')
   const selectedCropLabel = CROP_OPTIONS.find((opt) => opt.ticker === selectedTicker)?.label ?? 'Crop'
 
-  const bidsQuery = useMarketLocalBids('buhler')
+  const bidsQuery = useMarketLocalBids()
   const chartQuery = useMarketChart(selectedTicker, timeframe)
+  const mkcRows = useMemo(
+    () => (bidsQuery.data ?? []).filter((row) => row.location_slug === 'buhler'),
+    [bidsQuery.data],
+  )
+  const admRows = useMemo(
+    () => (bidsQuery.data ?? []).filter((row) => row.location_slug === 'adm-hutchinson'),
+    [bidsQuery.data],
+  )
 
   const chartX = useMemo(() => (chartQuery.data ?? []).map((row) => row.point_time), [chartQuery.data])
   const chartY = useMemo(() => (chartQuery.data ?? []).map((row) => row.close), [chartQuery.data])
+  const chartCentralLabels = useMemo(
+    () => (chartQuery.data ?? []).map((row) => centralFormatter.format(new Date(row.point_time))),
+    [chartQuery.data],
+  )
   const latestBidUpdate = useMemo(() => {
     const first = (bidsQuery.data ?? [])[0]
     if (!first?.last_updated) return null
@@ -55,6 +77,7 @@ export default function Market() {
             </p>
           )}
         </div>
+        <h3 className="market-table-title">MKC Buhler</h3>
         <div className="market-table-wrap">
           <table className="market-table">
             <thead>
@@ -67,7 +90,7 @@ export default function Market() {
               </tr>
             </thead>
             <tbody>
-              {(bidsQuery.data ?? []).map((row) => (
+              {mkcRows.map((row) => (
                 <tr key={`${row.location_slug}-${row.crop}`}>
                   <td>{row.crop}</td>
                   <td>{row.basis_month ?? '—'}</td>
@@ -76,10 +99,42 @@ export default function Market() {
                   <td>{formatPrice(row.cash_price)}</td>
                 </tr>
               ))}
-              {!bidsQuery.isLoading && (bidsQuery.data ?? []).length === 0 && (
+              {!bidsQuery.isLoading && mkcRows.length === 0 && (
                 <tr>
                   <td colSpan={5} className="market-empty">
-                    No CASH basis rows available yet.
+                    No MKC rows available yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <h3 className="market-table-title">ADM Hutchinson</h3>
+        <div className="market-table-wrap">
+          <table className="market-table">
+            <thead>
+              <tr>
+                <th>Crop</th>
+                <th>Basis Month</th>
+                <th>Futures Price</th>
+                <th>Basis</th>
+                <th>Cash Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              {admRows.map((row) => (
+                <tr key={`${row.location_slug}-${row.crop}`}>
+                  <td>{row.crop}</td>
+                  <td>{row.basis_month ?? '—'}</td>
+                  <td>{formatPrice(row.futures_price)}</td>
+                  <td>{formatBasis(row.basis)}</td>
+                  <td>{formatPrice(row.cash_price)}</td>
+                </tr>
+              ))}
+              {!bidsQuery.isLoading && admRows.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="market-empty">
+                    No ADM rows available yet.
                   </td>
                 </tr>
               )}
@@ -119,8 +174,9 @@ export default function Market() {
                 mode: 'lines',
                 x: chartX,
                 y: chartY,
+                customdata: chartCentralLabels,
                 line: { color: '#2d6a4f', width: 2 },
-                hovertemplate: '%{x}<br>$%{y:.2f}<extra></extra>',
+                hovertemplate: '%{customdata}<br>$%{y:.2f}<extra></extra>',
                 name: selectedCropLabel,
               },
             ]}
@@ -128,7 +184,7 @@ export default function Market() {
               title: { text: `${selectedCropLabel} (${selectedTicker})` },
               autosize: true,
               margin: { l: 40, r: 12, t: 42, b: 40 },
-              xaxis: { title: { text: 'Time' } },
+              xaxis: { title: { text: 'Time (CST/CDT)' } },
               yaxis: { title: { text: 'Price ($/bu)' } },
               paper_bgcolor: 'white',
               plot_bgcolor: 'white',
