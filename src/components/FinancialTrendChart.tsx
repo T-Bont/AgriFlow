@@ -4,8 +4,6 @@ import type { TransactionCategory } from '@/types/database'
 import type { TransactionHistoryItem } from '@/hooks/useTransactionHistory'
 import './FinancialTrendChart.css'
 
-type Granularity = 'year' | 'month'
-
 interface FinancialTrendChartProps {
   items: TransactionHistoryItem[]
   isLoading: boolean
@@ -18,14 +16,7 @@ const OVERALL_SERIES = [
   { key: 'overall_net', label: 'Overall net', color: '#1f3a8a' },
 ] as const
 
-function formatMonthLabel(key: string) {
-  const [year, month] = key.split('-')
-  const date = new Date(Number(year), Number(month) - 1, 1)
-  return date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
-}
-
 export default function FinancialTrendChart({ items, isLoading }: FinancialTrendChartProps) {
-  const [granularity, setGranularity] = useState<Granularity>('year')
   const [startYear, setStartYear] = useState<number | null>(null)
   const [endYear, setEndYear] = useState<number | null>(null)
 
@@ -43,7 +34,7 @@ export default function FinancialTrendChart({ items, isLoading }: FinancialTrend
   const availableYears = useMemo(() => {
     const years = new Set<number>()
     for (const item of items) {
-      const year = Number(item.date.slice(0, 4))
+      const year = item.season.year
       if (!Number.isNaN(year) && year > 0) years.add(year)
     }
     return [...years].sort((a, b) => a - b)
@@ -75,15 +66,7 @@ export default function FinancialTrendChart({ items, isLoading }: FinancialTrend
     const to = Math.max(startYear, endYear)
 
     const bucketKeys: string[] = []
-    if (granularity === 'year') {
-      for (let year = from; year <= to; year += 1) bucketKeys.push(String(year))
-    } else {
-      for (let year = from; year <= to; year += 1) {
-        for (let month = 1; month <= 12; month += 1) {
-          bucketKeys.push(`${year}-${String(month).padStart(2, '0')}`)
-        }
-      }
-    }
+    for (let year = from; year <= to; year += 1) bucketKeys.push(String(year))
 
     const base = Object.fromEntries(categoryOptions.map((c) => [`cat:${c}`, 0]))
     const bucketMap = new Map(
@@ -91,7 +74,7 @@ export default function FinancialTrendChart({ items, isLoading }: FinancialTrend
         key,
         {
           key,
-          label: granularity === 'year' ? key : formatMonthLabel(key),
+          label: key,
           overall_income: 0,
           overall_expense: 0,
           overall_net: 0,
@@ -101,12 +84,11 @@ export default function FinancialTrendChart({ items, isLoading }: FinancialTrend
     )
 
     for (const item of items) {
-      const date = new Date(item.date)
-      if (Number.isNaN(date.getTime())) continue
-      const year = date.getFullYear()
+      const year = item.season.year
+      if (!Number.isFinite(year) || year <= 0) continue
       if (year < from || year > to) continue
 
-      const key = granularity === 'year' ? String(year) : `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const key = String(year)
       const row = bucketMap.get(key)
       if (!row) continue
 
@@ -122,7 +104,7 @@ export default function FinancialTrendChart({ items, isLoading }: FinancialTrend
     }
 
     return bucketKeys.map((key) => bucketMap.get(key)!)
-  }, [categoryOptions, endYear, granularity, items, startYear])
+  }, [categoryOptions, endYear, items, startYear])
 
   const categorySeries = useMemo(
     () =>
@@ -162,13 +144,6 @@ export default function FinancialTrendChart({ items, isLoading }: FinancialTrend
   return (
     <div className="financial-trend">
       <div className="financial-trend-controls">
-        <label>
-          <span>View:</span>
-          <select value={granularity} onChange={(e) => setGranularity(e.target.value as Granularity)}>
-            <option value="year">Yearly</option>
-            <option value="month">Monthly</option>
-          </select>
-        </label>
         <label>
           <span>From:</span>
           <select value={startYear ?? availableYears[0]} onChange={(e) => setStartYear(Number(e.target.value))}>

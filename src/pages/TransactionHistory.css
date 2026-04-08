@@ -131,6 +131,17 @@
   margin-bottom: 12px;
 }
 
+.th-detail-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.th-detail-actions .danger {
+  color: #b33;
+  border-color: #b33;
+}
+
 .transaction-history-detail dl {
   margin: 0;
 }
@@ -151,5 +162,56 @@
 .th-detail-row dd {
   margin: 0;
   text-align: right;
+}
+
+.th-edit-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.th-edit-form h4 {
+  margin: 0;
+}
+
+.th-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.th-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.th-edit-form input,
+.th-edit-form select,
+.th-edit-form textarea {
+  min-height: 38px;
+  border: 1px solid #ccc;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.th-edit-form textarea {
+  min-height: 72px;
+}
+
+.th-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .th-edit-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 

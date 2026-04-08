@@ -16,13 +16,6 @@ Persona A: "Harvest Harry" (Primary)
 Field Creation:
 - "Draw on Map" feature to define field boundaries (GeoJSON).
 - Auto-calculate "Acres" based on polygon area, but acreage can also be manually entered if they have the information.
-3.2 Offline First & Sync (Critical)
-- Local Storage: The app must load the full state from IndexedDB (recommend usage of Dexie.js or TanStack Query with Persisters) immediately on launch.
-- Queue System: Modifications made offline must be added to a "Sync Queue."
-- Reconnection: When navigator.onLine is true:
-1. Process the Sync Queue (POST/PUT to Supabase).
-2. Pull latest data from Supabase (Conflict Resolution: Last-Write-Wins based on updated_at timestamp).
-3. Update Local Storage.
 3.3 Field-Level Financials & Data Entry
 - The "Log" Action: A Floating Action Button (FAB) (+) on the dashboard and field view to add a record.
 - Transaction Types:
@@ -68,12 +61,6 @@ B. Expense Recording (Vendor & Product Context)
 4. API & Sync Strategy
 4.1 Technology Choice: TanStack Query + Supabase
 We will not build a custom REST API. We will use the Supabase JavaScript Client directly in the React frontend, wrapped in TanStack Query for caching and state management.
-4.2 Offline "Optimistic" Workflow
-1. State: Use zustand or TanStack Query with persist-client to save the mutation queue to localStorage.
-2. Image Uploads:
-- Offline: Store image as Base64 string in IndexedDB.
-- Offline Storage: We must store the "Picklists" (List of Vendors, List of previous Chemicals, List of Contracts) in IndexedDB so the auto-complete works offline.
-- Online: Background Service Worker detects connection -> Uploads to Supabase Storage -> Gets URL -> Updates Transaction Record -> Clears local Base64.
 3. Commodity API (3rd Party):
 - Use a serverless Edge Function (Supabase Functions) to proxy requests to an API like Alpha Vantage or Commodities-API.
 - Why? To hide API keys and cache results (reduce 3rd party costs).

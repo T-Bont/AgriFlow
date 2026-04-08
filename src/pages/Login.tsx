@@ -45,7 +45,6 @@ export default function Login() {
     <div className="login">
       <div className="login-card">
         <h1 className="login-title">AgriFlow</h1>
-        <p className="login-subtitle">Offline-first farm management</p>
         <form onSubmit={handleSignIn} className="login-form">
           <label>
             <span>Email</span>

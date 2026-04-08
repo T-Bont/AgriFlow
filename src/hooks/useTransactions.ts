@@ -7,6 +7,11 @@ import { v4 as uuidv4 } from 'uuid'
 export function useTransactions(seasonId: string | undefined) {
   const qc = useQueryClient()
   const enqueue = useSyncQueue((s) => s.enqueue)
+  const invalidateTransactionDependents = () => {
+    qc.invalidateQueries({ queryKey: ['transactions'] })
+    qc.invalidateQueries({ queryKey: ['transactions-by-season'] })
+    qc.invalidateQueries({ queryKey: ['view_field_pnl'] })
+  }
 
   const query = useQuery({
     queryKey: ['transactions', seasonId],
@@ -35,6 +40,35 @@ export function useTransactions(seasonId: string | undefined) {
       meta_data?: Record<string, unknown>
     }) => {
       if (!seasonId) throw new Error('No season')
+      if (!Number.isFinite(payload.amount)) throw new Error('Amount is invalid')
+      if (payload.quantity != null && (!Number.isFinite(payload.quantity) || payload.quantity < 0)) {
+        throw new Error('Quantity is invalid')
+      }
+      if ((payload.category === 'Harvest' || payload.category === 'Grain Sale') && payload.unit !== 'bu') {
+        throw new Error(`${payload.category} must use bushels (bu) as unit`)
+      }
+      if (payload.category === 'Harvest' || payload.category === 'Grain Sale') {
+        if (payload.quantity == null || !Number.isFinite(payload.quantity) || payload.quantity <= 0) {
+          throw new Error(`${payload.category} quantity must be greater than zero`)
+        }
+      }
+
+      if (payload.category === 'Grain Sale') {
+        const seasonTransactions = query.data ?? []
+        const harvestedBu = seasonTransactions
+          .filter((t) => t.category === 'Harvest' && t.unit === 'bu' && t.quantity != null)
+          .reduce((sum, t) => sum + (t.quantity ?? 0), 0)
+        const soldBu = seasonTransactions
+          .filter((t) => t.category === 'Grain Sale' && t.unit === 'bu' && t.quantity != null)
+          .reduce((sum, t) => sum + (t.quantity ?? 0), 0)
+        const nextQty = payload.quantity ?? 0
+        if (soldBu + nextQty > harvestedBu) {
+          throw new Error(
+            `Cannot save grain sale: ${Math.max(0, harvestedBu - soldBu).toLocaleString()} bu available for this season.`,
+          )
+        }
+      }
+
       const row = {
         id: uuidv4(),
         season_id: seasonId,
@@ -59,8 +93,7 @@ export function useTransactions(seasonId: string | undefined) {
       return row as Transaction
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transactions', seasonId] })
-      qc.invalidateQueries({ queryKey: ['view_field_pnl'] })
+      invalidateTransactionDependents()
     },
   })
 

@@ -64,6 +64,9 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
   const [totalDeductions, setTotalDeductions] = useState('')
   const [netIncome, setNetIncome] = useState('')
   const [programType, setProgramType] = useState('')
+  const [localTax, setLocalTax] = useState('')
+  const [stateTax, setStateTax] = useState('')
+  const [federalTax, setFederalTax] = useState('')
   const [newGovProgram, setNewGovProgram] = useState('')
   const [newVendor, setNewVendor] = useState('')
   const [newProductName, setNewProductName] = useState('')
@@ -72,11 +75,12 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
   const isIncome = INCOME_CATEGORIES.includes(category)
   const type: TransactionType = isIncome ? 'INCOME' : 'EXPENSE'
   const isHarvest = category === 'Harvest'
-  const showVendor = showAllFields || (!isIncome && !isHarvest)
+  const showVendor = (showAllFields || (!isIncome && !isHarvest) || category === 'Grain Sale') && category !== 'Tax'
   const showFertilizer = showAllFields || category === 'Fertilizer' || category === 'Chemical'
   const showGrainSale = showAllFields || category === 'Grain Sale'
   const showHarvest = showAllFields || isHarvest
   const showGovPayment = showAllFields || category === 'Govt Payment'
+  const showTaxBreakdown = showAllFields || category === 'Tax'
 
   const computedNetIncome =
     bushelsSold && pricePerBushel
@@ -240,10 +244,31 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
     }
 
     if (showGovPayment && programType) meta.program_type = programType
+    if (showTaxBreakdown) {
+      if (localTax.trim()) {
+        const parsedLocal = Number.parseFloat(localTax)
+        if (Number.isFinite(parsedLocal)) meta.local_tax = parsedLocal
+      }
+      if (stateTax.trim()) {
+        const parsedState = Number.parseFloat(stateTax)
+        if (Number.isFinite(parsedState)) meta.state_tax = parsedState
+      }
+      if (federalTax.trim()) {
+        const parsedFederal = Number.parseFloat(federalTax)
+        if (Number.isFinite(parsedFederal)) meta.federal_tax = parsedFederal
+      }
+    }
     if (showFertilizer) {
       if (productName) meta.product_name = productName
       if (applicationStage) meta.application_stage = applicationStage
       if (weatherNotes) meta.weather_notes = weatherNotes
+      if (nAnalysis.trim()) meta.n_analysis_input = nAnalysis.trim()
+      if (totalLbs.trim()) {
+        const parsedTotalLbs = Number.parseFloat(totalLbs)
+        if (Number.isFinite(parsedTotalLbs)) {
+          meta.total_lbs = parsedTotalLbs
+        }
+      }
       if (parsedNitrogenPercent != null && totalLbs) {
         const totalN = (parsedNitrogenPercent / 100) * parseFloat(totalLbs)
         const acres = fieldAcres ?? null
@@ -628,6 +653,22 @@ export default function LogForm({ seasonId, onSuccess, showAllFields = false, fi
             </button>
           </div>
         </>
+      )}
+      {showTaxBreakdown && (
+        <div className="log-form-row">
+          <label>
+            <span>Local tax ($)</span>
+            <input type="number" step="0.01" min="0" inputMode="decimal" value={localTax} onChange={(e) => setLocalTax(e.target.value)} />
+          </label>
+          <label>
+            <span>State tax ($)</span>
+            <input type="number" step="0.01" min="0" inputMode="decimal" value={stateTax} onChange={(e) => setStateTax(e.target.value)} />
+          </label>
+          <label>
+            <span>Federal tax ($)</span>
+            <input type="number" step="0.01" min="0" inputMode="decimal" value={federalTax} onChange={(e) => setFederalTax(e.target.value)} />
+          </label>
+        </div>
       )}
       <label>
         <span>Notes</span>
