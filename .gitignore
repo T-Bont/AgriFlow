@@ -21,6 +21,9 @@ dist
 # Supabase local artifacts
 .supabase
 supabase/.temp
+supabase/scripts/*vault*secrets*.local.sql
+mcp-payload.json
+mcp-args-for-tool.json
 
 # Editor / OS
 .DS_Store
