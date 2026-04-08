@@ -30,6 +30,9 @@ export default function Layout() {
         <NavLink to="/inventory" className={({ isActive }) => (isActive ? 'layout-nav-link active' : 'layout-nav-link')}>
           Inventory
         </NavLink>
+        <NavLink to="/market" className={({ isActive }) => (isActive ? 'layout-nav-link active' : 'layout-nav-link')}>
+          Market
+        </NavLink>
         <NavLink to="/financials" className={({ isActive }) => (isActive ? 'layout-nav-link active' : 'layout-nav-link')}>
           Financials
         </NavLink>

@@ -147,6 +147,60 @@ export interface DashboardSnapshotFieldBoundary {
   updated_at: string
 }
 
+export interface MarketLocalBidRaw {
+  id: number
+  location_slug: string
+  crop: string
+  basis_month: string | null
+  futures_price: number | null
+  basis: number | null
+  cash_price: number | null
+  note: string | null
+  source_url: string
+  observed_at: string
+  scraped_at: string
+  raw_payload: Record<string, unknown> | null
+}
+
+export interface MarketLocalBidCurrent {
+  id: number
+  location_slug: string
+  crop: string
+  basis_month: string | null
+  futures_price: number | null
+  basis: number | null
+  cash_price: number | null
+  note: string | null
+  source_url: string
+  last_updated: string
+}
+
+export interface MarketFuturesSnapshot {
+  id: number
+  ticker: string
+  crop: string
+  interval: string
+  point_time: string
+  open: number | null
+  high: number | null
+  low: number | null
+  close: number | null
+  volume: number | null
+  fetched_at: string
+  source: string
+}
+
+export interface MarketSyncRun {
+  id: number
+  source: string
+  status: 'started' | 'success' | 'error'
+  started_at: string
+  finished_at: string | null
+  error_text: string | null
+  rows_written: number
+  meta: Record<string, unknown> | null
+}
+
 declare global {
   namespace GeoJSON {
     interface Polygon {
@@ -166,6 +220,10 @@ export interface Database {
       transactions: { Row: Transaction; Insert: Omit<Transaction, 'id' | 'created_at' | 'updated_at'> & { id?: string }; Update: Partial<Transaction> }
       dashboard_snapshots: { Row: DashboardSnapshot; Insert: Omit<DashboardSnapshot, 'id' | 'created_at'> & { id?: string; created_at?: string }; Update: Partial<DashboardSnapshot> }
       dashboard_snapshot_field_boundaries: { Row: DashboardSnapshotFieldBoundary; Insert: Omit<DashboardSnapshotFieldBoundary, 'id' | 'updated_at'> & { id?: string; updated_at?: string }; Update: Partial<DashboardSnapshotFieldBoundary> }
+      market_local_bids_raw: { Row: MarketLocalBidRaw; Insert: Omit<MarketLocalBidRaw, 'id'> & { id?: number }; Update: Partial<MarketLocalBidRaw> }
+      market_local_bids_current: { Row: MarketLocalBidCurrent; Insert: Omit<MarketLocalBidCurrent, 'id'> & { id?: number }; Update: Partial<MarketLocalBidCurrent> }
+      market_futures_snapshots: { Row: MarketFuturesSnapshot; Insert: Omit<MarketFuturesSnapshot, 'id'> & { id?: number }; Update: Partial<MarketFuturesSnapshot> }
+      market_sync_runs: { Row: MarketSyncRun; Insert: Omit<MarketSyncRun, 'id'> & { id?: number }; Update: Partial<MarketSyncRun> }
     }
     Views: {
       view_field_pnl: { Row: FieldPnlRow }

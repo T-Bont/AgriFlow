@@ -80,6 +80,7 @@ Objective: To give the user an overview of the current market conditions for the
 A. The Tickers
 - Visual: Rows of crop prices specific to which crops the user has. This would have typical information associated with each one like current price, % change, etc.
 - Content:
+- Buhler Tickers: ZC (Corn), ZS (Soybeans), KE (Wheat), Milo same as corn.
 - Market: Chicago Board of Trade (CBOT) Futures for Corn (ZC), Soybeans (ZS), and Wheat (ZW) and others.
 - Display: Big bold price (e.g., "$4.50"), Change indicator (Green Up Arrow / Red Down Arrow), and " cents change" (e.g., "+0.12").
 - User Config: User selects which crops appear here in Settings.
