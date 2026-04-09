@@ -24,6 +24,14 @@ const centralFormatter = new Intl.DateTimeFormat('en-US', {
   hour12: true,
   timeZoneName: 'short',
 })
+const centralAxisFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Chicago',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+})
 
 function formatPrice(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return '—'
@@ -58,6 +66,29 @@ export default function Market() {
     () => (chartQuery.data ?? []).map((row) => centralFormatter.format(new Date(row.point_time))),
     [chartQuery.data],
   )
+  const chartAxisLabels = useMemo(
+    () => (chartQuery.data ?? []).map((row) => centralAxisFormatter.format(new Date(row.point_time))),
+    [chartQuery.data],
+  )
+  const chartTicks = useMemo(() => {
+    if (chartX.length === 0) return { tickvals: [] as string[], ticktext: [] as string[] }
+    if (chartX.length <= 8) return { tickvals: chartX, ticktext: chartAxisLabels }
+
+    const targetTickCount = 8
+    const lastIndex = chartX.length - 1
+    const step = Math.max(1, Math.floor(lastIndex / (targetTickCount - 1)))
+    const indices: number[] = []
+    for (let idx = 0; idx <= lastIndex; idx += step) {
+      indices.push(idx)
+    }
+    if (indices[indices.length - 1] !== lastIndex) {
+      indices.push(lastIndex)
+    }
+    return {
+      tickvals: indices.map((idx) => chartX[idx]),
+      ticktext: indices.map((idx) => chartAxisLabels[idx]),
+    }
+  }, [chartAxisLabels, chartX])
   const latestBidUpdate = useMemo(() => {
     const first = (bidsQuery.data ?? [])[0]
     if (!first?.last_updated) return null
@@ -184,7 +215,12 @@ export default function Market() {
               title: { text: `${selectedCropLabel} (${selectedTicker})` },
               autosize: true,
               margin: { l: 40, r: 12, t: 42, b: 40 },
-              xaxis: { title: { text: 'Time (CST/CDT)' } },
+              xaxis: {
+                title: { text: 'Time (CST/CDT)' },
+                tickmode: 'array',
+                tickvals: chartTicks.tickvals,
+                ticktext: chartTicks.ticktext,
+              },
               yaxis: { title: { text: 'Price ($/bu)' } },
               paper_bgcolor: 'white',
               plot_bgcolor: 'white',
