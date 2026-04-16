@@ -57,6 +57,14 @@ export interface MapViewHandle {
         size: { width: number; height: number }
       }
     | null
+
+  /** Projects lng/lat into this map's current canvas pixel coordinate space, normalized to 0..1. */
+  projectLngLatToNorm: (lng: number, lat: number) =>
+    | {
+        nx: number
+        ny: number
+      }
+    | null
 }
 
 const CROP_COLORS: Record<string, string> = {
@@ -144,6 +152,22 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
             pitch: map.getPitch(),
           },
           size: { width, height },
+        }
+      },
+      projectLngLatToNorm: (lng: number, lat: number) => {
+        if (!mapRef.current) return null
+        const map = mapRef.current
+        const canvas = map.getCanvas()
+        const canvasW = canvas.clientWidth || canvas.width || 1
+        const canvasH = canvas.clientHeight || canvas.height || 1
+
+        const p = map.project([lng, lat])
+        const x = p.x / (canvasW || 1)
+        const y = p.y / (canvasH || 1)
+
+        return {
+          nx: Math.max(0, Math.min(1, x)),
+          ny: Math.max(0, Math.min(1, y)),
         }
       },
     }),

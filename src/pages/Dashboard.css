@@ -37,6 +37,15 @@
   gap: 8px;
 }
 
+.satellite-mobile-edit-hint {
+  color: #fff;
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.3);
+}
+
 .satellite-dashboard-label {
   color: #fff;
   font-size: 14px;
@@ -221,6 +230,37 @@
   font-weight: 600;
 }
 
+.dashboard-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 110;
+  padding: 20px;
+}
+
+.dashboard-modal {
+  width: min(440px, 100%);
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.dashboard-modal p {
+  margin: 0;
+  color: var(--text);
+}
+
+.dashboard-modal-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 @media (max-width: 768px) {
   .satellite-dashboard {
     min-height: 320px;
@@ -246,6 +286,10 @@
     align-items: center;
     justify-content: center;
     min-height: var(--touch-min);
+  }
+
+  .satellite-mobile-edit-hint {
+    width: 100%;
   }
 
   .mobile-edit-actions {

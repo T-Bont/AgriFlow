@@ -9,6 +9,7 @@ import FAB from '@/components/FAB'
 import FieldList from '@/components/FieldList'
 import type { Field } from '@/types/database'
 import { useProfile } from '@/hooks/useProfile'
+import { useDashboardSnapshots } from '@/hooks/useDashboardSnapshots'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useDashboardSnapshotBoundaries } from '@/hooks/useDashboardSnapshotBoundaries'
@@ -18,6 +19,7 @@ import './Dashboard.css'
 export default function Dashboard() {
   const navigate = useNavigate()
   const { profile } = useProfile()
+  const { snapshots, setCurrentSnapshotId } = useDashboardSnapshots()
   const { user } = useAuth()
   const { fields, isLoading: fieldsLoading, createField } = useFields()
   const { data: pnlRows = [] } = useFieldPnl()
@@ -35,10 +37,28 @@ export default function Dashboard() {
   const [editingRingNorm, setEditingRingNorm] = useState<number[][] | null>(null)
   const [draftStaticRingNorm, setDraftStaticRingNorm] = useState<number[][] | null>(null)
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
-  const [mobileEditOpen, setMobileEditOpen] = useState(false)
+  const [showMobileEditHint, setShowMobileEditHint] = useState(false)
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null)
+  const [showFieldViewWarning, setShowFieldViewWarning] = useState(false)
+  const [pendingFieldAction, setPendingFieldAction] = useState<'add' | 'draw' | null>(null)
 
-  const hasSnapshot = !!profile?.settings?.dashboard_snapshot
-  const snapshot = profile?.settings?.dashboard_snapshot ?? null
+  const legacySnapshot = profile?.settings?.dashboard_snapshot ?? null
+  const activeSnapshotRow = useMemo(
+    () => snapshots.find((s) => s.id === selectedSnapshotId) ?? null,
+    [snapshots, selectedSnapshotId],
+  )
+  const snapshot = activeSnapshotRow
+    ? {
+        snapshot_id: activeSnapshotRow.id,
+        bbox: activeSnapshotRow.bbox as { west: number; south: number; east: number; north: number },
+        image_url: activeSnapshotRow.image_url,
+        width: activeSnapshotRow.width,
+        height: activeSnapshotRow.height,
+        scale: activeSnapshotRow.scale ?? undefined,
+        created_at: activeSnapshotRow.created_at,
+      }
+    : legacySnapshot
+  const hasSnapshot = !!snapshot
   const showSnapshot = hasSnapshot && !useLiveMap
   const snapshotId = snapshot?.snapshot_id ?? null
 
@@ -105,7 +125,29 @@ export default function Dashboard() {
     return () => media.removeEventListener('change', onChange)
   }, [])
 
-  const showEditControls = !isMobile || mobileEditOpen
+  const showEditControls = !isMobile
+
+  useEffect(() => {
+    if (selectedSnapshotId) return
+    const preferredId =
+      profile?.settings?.dashboard_current_snapshot_id ??
+      profile?.settings?.dashboard_default_snapshot_id ??
+      profile?.settings?.dashboard_snapshot?.snapshot_id ??
+      null
+    if (preferredId && snapshots.some((s) => s.id === preferredId)) {
+      setSelectedSnapshotId(preferredId)
+      return
+    }
+    if (snapshots.length > 0) {
+      setSelectedSnapshotId(snapshots[0].id)
+    }
+  }, [profile, selectedSnapshotId, snapshots])
+
+  useEffect(() => {
+    if (!showMobileEditHint) return
+    const timeoutId = window.setTimeout(() => setShowMobileEditHint(false), 2200)
+    return () => window.clearTimeout(timeoutId)
+  }, [showMobileEditHint])
 
   const handleFieldSelect = (field: Field) => {
     navigate(`/field/${field.id}`)
@@ -173,6 +215,35 @@ export default function Dashboard() {
     setDraftBoundary(null)
     setDraftGisAcres(null)
     setDraftStaticRingNorm(null)
+  }
+
+  const cancelDrawNewField = () => {
+    setDrawModeForNewField(false)
+    setDraftBoundary(null)
+    setDraftGisAcres(null)
+    setDraftStaticRingNorm(null)
+  }
+
+  const requestFieldAction = (action: 'add' | 'draw') => {
+    setPendingFieldAction(action)
+    setShowFieldViewWarning(true)
+  }
+
+  const cancelFieldActionWarning = () => {
+    setShowFieldViewWarning(false)
+    setPendingFieldAction(null)
+  }
+
+  const confirmFieldActionWarning = () => {
+    if (pendingFieldAction === 'add') {
+      setShowAddField(true)
+    } else if (pendingFieldAction === 'draw') {
+      if (showSnapshot) {
+        setUseLiveMap(true)
+      }
+      setDrawModeForNewField(true)
+    }
+    cancelFieldActionWarning()
   }
 
   const cancelSnapshotEdit = () => {
@@ -249,29 +320,30 @@ export default function Dashboard() {
           {isMobile && (
             <button
               type="button"
-              className={`satellite-edit-toggle${mobileEditOpen ? ' active' : ''}`}
-              onClick={() => setMobileEditOpen((prev) => !prev)}
+              className="satellite-edit-toggle"
+              onClick={() => setShowMobileEditHint(true)}
             >
               Edit
             </button>
+          )}
+          {isMobile && showMobileEditHint && (
+            <span className="satellite-mobile-edit-hint">Edit fields on computer</span>
           )}
           <div className={`mobile-edit-actions${showEditControls ? '' : ' hidden'}`}>
             <button
               type="button"
               className="btn-outline"
-              onClick={() => navigate('/map/edit')}
+              onClick={() => {
+                const snapshotIdParam = selectedSnapshotId ? `?snapshot_id=${selectedSnapshotId}` : ''
+                navigate(`/map/edit${snapshotIdParam}`)
+              }}
             >
               Edit field layout
             </button>
             <button
               type="button"
               className="btn-outline"
-              disabled={showSnapshot}
-              onClick={() => {
-                if (!showSnapshot) {
-                  setDrawModeForNewField(true)
-                }
-              }}
+              onClick={() => requestFieldAction('draw')}
             >
               Draw new field
             </button>
@@ -311,7 +383,12 @@ export default function Dashboard() {
             </>
           )}
           {drawModeForNewField && (
-            <span className="satellite-dashboard-label">Draw a polygon on the map, then name the field below.</span>
+            <>
+              <span className="satellite-dashboard-label">Draw a polygon on the map, then name the field below.</span>
+              <button type="button" className="btn-outline" onClick={cancelDrawNewField}>
+                Cancel
+              </button>
+            </>
           )}
           {availableYears.length > 0 && (
             <>
@@ -328,6 +405,35 @@ export default function Dashboard() {
                   </option>
                 ))}
               </select>
+            </>
+          )}
+          {snapshots.length > 0 && (
+            <>
+              <span className="satellite-dashboard-label">Current View:</span>
+              <select
+                className="satellite-dashboard-season"
+                value={selectedSnapshotId ?? snapshots[0].id}
+                onChange={(e) => {
+                  const nextId = e.target.value
+                  setSelectedSnapshotId(nextId)
+                  setCurrentSnapshotId.mutate(nextId)
+                  setUseLiveMap(false)
+                }}
+                aria-label="Select current static dashboard view"
+              >
+                {snapshots.map((view) => (
+                  <option key={view.id} value={view.id}>
+                    {view.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => navigate('/map/edit?mode=create')}
+              >
+                Add View
+              </button>
             </>
           )}
           <span className="satellite-dashboard-label">Color by:</span>
@@ -406,7 +512,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 className="btn-outline"
-                onClick={() => setShowAddField(true)}
+                onClick={() => requestFieldAction('add')}
               >
                 + Add field
               </button>
@@ -415,6 +521,21 @@ export default function Dashboard() {
         </section>
         </div>
       </section>
+      {showFieldViewWarning && (
+        <div className="dashboard-modal-backdrop" role="presentation">
+          <div className="dashboard-modal" role="dialog" aria-modal="true" aria-label="Field view confirmation">
+            <p>Ensure view selected is where the new field will reside.</p>
+            <div className="dashboard-modal-actions">
+              <button type="button" onClick={confirmFieldActionWarning}>
+                Confirm
+              </button>
+              <button type="button" className="btn-outline" onClick={cancelFieldActionWarning}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <FAB to="/log" />
     </div>
   )

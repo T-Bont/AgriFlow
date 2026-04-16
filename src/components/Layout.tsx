@@ -42,6 +42,9 @@ export default function Layout() {
         >
           Transaction history
         </NavLink>
+        <NavLink to="/settings" className={({ isActive }) => (isActive ? 'layout-nav-link active' : 'layout-nav-link')}>
+          Settings
+        </NavLink>
       </nav>
       <main className="layout-main">
         <Outlet />

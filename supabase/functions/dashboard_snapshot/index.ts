@@ -34,6 +34,10 @@ interface SnapshotRequestBody {
     bearing: number
     pitch: number
   }
+  mode?: 'create' | 'update'
+  snapshot_id?: string
+  name?: string
+  set_as_current?: boolean
 }
 
 const corsHeaders = {
@@ -180,32 +184,69 @@ serve(async (req) => {
 
   const existingSettings = (profile.settings ?? {}) as Record<string, unknown>
 
-  // Persist a snapshot row so static boundaries can reference it.
-  const { data: snapshotRow, error: snapshotInsertError } = await supabase
-    .from('dashboard_snapshots')
-    .insert({
-      user_id: user.id,
-      bbox,
-      image_url: publicUrl,
-      width,
-      height,
-      scale,
-    } as never)
-    .select('id')
-    .single()
+  const mode = body.mode === 'update' ? 'update' : 'create'
+  const requestedSnapshotId = body.snapshot_id
+  const snapshotName = (body.name ?? '').trim() || 'Untitled view'
+  const shouldSetAsCurrent = body.set_as_current ?? true
+  const nowIso = now
 
-  if (snapshotInsertError || !snapshotRow) {
-    return new Response(
-      JSON.stringify({ error: 'Failed to persist dashboard snapshot', details: snapshotInsertError?.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    )
+  let snapshotId: string
+  if (mode === 'update' && requestedSnapshotId) {
+    const { data: snapshotRow, error: snapshotUpdateError } = await supabase
+      .from('dashboard_snapshots')
+      .update({
+        ...(body.name ? { name: snapshotName } : {}),
+        bbox,
+        image_url: publicUrl,
+        width,
+        height,
+        scale,
+        updated_at: nowIso,
+      } as never)
+      .eq('id', requestedSnapshotId)
+      .eq('user_id', user.id)
+      .select('id')
+      .single()
+    if (snapshotUpdateError || !snapshotRow) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to update dashboard snapshot', details: snapshotUpdateError?.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+    snapshotId = snapshotRow.id as string
+  } else {
+    const { data: snapshotRow, error: snapshotInsertError } = await supabase
+      .from('dashboard_snapshots')
+      .insert({
+        user_id: user.id,
+        name: snapshotName,
+        bbox,
+        image_url: publicUrl,
+        width,
+        height,
+        scale,
+        updated_at: nowIso,
+      } as never)
+      .select('id')
+      .single()
+
+    if (snapshotInsertError || !snapshotRow) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to persist dashboard snapshot', details: snapshotInsertError?.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+    snapshotId = snapshotRow.id as string
   }
 
   const dashboardSnapshot = {
-    snapshot_id: snapshotRow.id,
+    snapshot_id: snapshotId,
     bbox,
     image_url: publicUrl,
     width,
@@ -217,6 +258,11 @@ serve(async (req) => {
   const nextSettings = {
     ...existingSettings,
     dashboard_snapshot: dashboardSnapshot,
+    ...(shouldSetAsCurrent
+      ? {
+          dashboard_current_snapshot_id: snapshotId,
+        }
+      : {}),
     ...(body.camera
       ? {
           dashboard_camera: body.camera,
@@ -243,6 +289,8 @@ serve(async (req) => {
 
   return new Response(
     JSON.stringify({
+      mode,
+      snapshot_id: snapshotId,
       snapshot: dashboardSnapshot,
       settings: updatedProfile.settings,
     }),

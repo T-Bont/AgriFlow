@@ -42,6 +42,10 @@ export interface Profile {
       scale?: number
       created_at?: string
     }
+    /** Selected static snapshot view ID for dashboard rendering. */
+    dashboard_current_snapshot_id?: string
+    /** Default static snapshot view ID used as initial dashboard selection. */
+    dashboard_default_snapshot_id?: string
     /** Optional saved camera for reopening Mapbox edit view at a sensible framing. */
     dashboard_camera?: {
       center: [number, number]
@@ -130,12 +134,14 @@ export interface FieldPnlRow {
 export interface DashboardSnapshot {
   id: string
   user_id: string
+  name: string
   bbox: Record<string, unknown>
   image_url: string
   width: number
   height: number
   scale: number | null
   created_at: string
+  updated_at?: string
 }
 
 export interface DashboardSnapshotFieldBoundary {
