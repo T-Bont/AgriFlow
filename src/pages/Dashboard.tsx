@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [draftStaticRingNorm, setDraftStaticRingNorm] = useState<number[][] | null>(null)
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
   const [showMobileEditHint, setShowMobileEditHint] = useState(false)
+  const [showMobileAddViewHint, setShowMobileAddViewHint] = useState(false)
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null)
   const [showFieldViewWarning, setShowFieldViewWarning] = useState(false)
   const [pendingFieldAction, setPendingFieldAction] = useState<'add' | 'draw' | null>(null)
@@ -148,6 +149,12 @@ export default function Dashboard() {
     const timeoutId = window.setTimeout(() => setShowMobileEditHint(false), 2200)
     return () => window.clearTimeout(timeoutId)
   }, [showMobileEditHint])
+
+  useEffect(() => {
+    if (!showMobileAddViewHint) return
+    const timeoutId = window.setTimeout(() => setShowMobileAddViewHint(false), 2200)
+    return () => window.clearTimeout(timeoutId)
+  }, [showMobileAddViewHint])
 
   const handleFieldSelect = (field: Field) => {
     navigate(`/field/${field.id}`)
@@ -430,10 +437,19 @@ export default function Dashboard() {
               <button
                 type="button"
                 className="btn-outline"
-                onClick={() => navigate('/map/edit?mode=create')}
+                onClick={() => {
+                  if (isMobile) {
+                    setShowMobileAddViewHint(true)
+                    return
+                  }
+                  navigate('/map/edit?mode=create')
+                }}
               >
                 Add View
               </button>
+              {isMobile && showMobileAddViewHint && (
+                <span className="satellite-mobile-edit-hint">Add view on computer</span>
+              )}
             </>
           )}
           <span className="satellite-dashboard-label">Color by:</span>
