@@ -10,7 +10,6 @@ export default function Settings() {
     isLoading,
     renameSnapshot,
     deleteSnapshot,
-    setCurrentSnapshotId,
     setDefaultSnapshotId,
   } = useDashboardSnapshots()
   const [draftNames, setDraftNames] = useState<Record<string, string>>({})
@@ -44,7 +43,6 @@ export default function Settings() {
                 onChange={(e) => {
                   const nextId = e.target.value || null
                   setDefaultSnapshotId.mutate(nextId)
-                  if (nextId) setCurrentSnapshotId.mutate(nextId)
                 }}
               >
                 {snapshots.map((view) => (

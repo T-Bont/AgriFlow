@@ -21,7 +21,7 @@ export default function Dashboard() {
   const { profile } = useProfile()
   const { snapshots, setCurrentSnapshotId } = useDashboardSnapshots()
   const { user } = useAuth()
-  const { fields, isLoading: fieldsLoading, createField } = useFields()
+  const { fields, isLoading: fieldsLoading, createField, updateField } = useFields()
   const { data: pnlRows = [] } = useFieldPnl()
   const [showAddField, setShowAddField] = useState(false)
   const [newName, setNewName] = useState('')
@@ -36,6 +36,10 @@ export default function Dashboard() {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
   const [editingRingNorm, setEditingRingNorm] = useState<number[][] | null>(null)
   const [draftStaticRingNorm, setDraftStaticRingNorm] = useState<number[][] | null>(null)
+  const [liveBoundaryEditMode, setLiveBoundaryEditMode] = useState(false)
+  const [editingLiveFieldId, setEditingLiveFieldId] = useState<string | null>(null)
+  const [editingLiveBoundary, setEditingLiveBoundary] = useState<GeoJSON.Polygon | null>(null)
+  const [editingLiveGisAcres, setEditingLiveGisAcres] = useState<number | null>(null)
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
   const [showMobileEditHint, setShowMobileEditHint] = useState(false)
   const [showMobileAddViewHint, setShowMobileAddViewHint] = useState(false)
@@ -131,8 +135,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (selectedSnapshotId) return
     const preferredId =
-      profile?.settings?.dashboard_current_snapshot_id ??
       profile?.settings?.dashboard_default_snapshot_id ??
+      profile?.settings?.dashboard_current_snapshot_id ??
       profile?.settings?.dashboard_snapshot?.snapshot_id ??
       null
     if (preferredId && snapshots.some((s) => s.id === preferredId)) {
@@ -155,6 +159,15 @@ export default function Dashboard() {
     const timeoutId = window.setTimeout(() => setShowMobileAddViewHint(false), 2200)
     return () => window.clearTimeout(timeoutId)
   }, [showMobileAddViewHint])
+
+  useEffect(() => {
+    if (!showSnapshot) return
+    if (!liveBoundaryEditMode) return
+    setLiveBoundaryEditMode(false)
+    setEditingLiveFieldId(null)
+    setEditingLiveBoundary(null)
+    setEditingLiveGisAcres(null)
+  }, [showSnapshot, liveBoundaryEditMode])
 
   const handleFieldSelect = (field: Field) => {
     navigate(`/field/${field.id}`)
@@ -258,6 +271,10 @@ export default function Dashboard() {
     setSelectedFieldId(null)
     setEditingRingNorm(null)
     setDraftStaticRingNorm(null)
+    setLiveBoundaryEditMode(false)
+    setEditingLiveFieldId(null)
+    setEditingLiveBoundary(null)
+    setEditingLiveGisAcres(null)
   }
 
   const saveEditedBoundary = async () => {
@@ -275,6 +292,18 @@ export default function Dashboard() {
         { onConflict: 'snapshot_id,field_id' },
       )
     await refetchStaticBoundaries()
+    cancelSnapshotEdit()
+  }
+
+  const saveLiveEditedBoundary = async () => {
+    if (!editingLiveFieldId || !editingLiveBoundary) return
+    await updateField.mutateAsync({
+      id: editingLiveFieldId,
+      payload: {
+        boundary: editingLiveBoundary,
+        gis_acres: editingLiveGisAcres ?? undefined,
+      },
+    })
     cancelSnapshotEdit()
   }
 
@@ -310,7 +339,7 @@ export default function Dashboard() {
           ) : (
             <MapView
               fields={fieldsWithCrop}
-              onFieldSelect={handleFieldSelect}
+              onFieldSelect={liveBoundaryEditMode ? () => {} : handleFieldSelect}
               colorBy={mapColorBy}
               pnlByFieldId={mapColorBy === 'profit' ? pnlByFieldId : undefined}
               initialCenter={
@@ -320,6 +349,12 @@ export default function Dashboard() {
               fitBoundsToFields={!profile?.settings?.dashboard_camera}
               drawMode={drawModeForNewField}
               onBoundaryDrawn={drawModeForNewField ? handleBoundaryDrawn : undefined}
+              editBoundaryMode={liveBoundaryEditMode}
+              onBoundaryEdited={(fieldId, boundary, gisAcres) => {
+                setEditingLiveFieldId(fieldId)
+                setEditingLiveBoundary(boundary)
+                setEditingLiveGisAcres(gisAcres)
+              }}
             />
           )}
         </div>
@@ -357,32 +392,49 @@ export default function Dashboard() {
             <button
               type="button"
               className="btn-outline"
-              disabled={!showSnapshot}
               onClick={() => {
-                setSnapshotMode('edit_boundary')
+                if (showSnapshot) {
+                  setSnapshotMode('edit_boundary')
+                  setSelectedFieldId(null)
+                  setEditingRingNorm(null)
+                  setLiveBoundaryEditMode(false)
+                  setEditingLiveFieldId(null)
+                  setEditingLiveBoundary(null)
+                  setEditingLiveGisAcres(null)
+                  return
+                }
+                setLiveBoundaryEditMode(true)
+                setSnapshotMode('view')
                 setSelectedFieldId(null)
                 setEditingRingNorm(null)
+                setEditingLiveFieldId(null)
+                setEditingLiveBoundary(null)
+                setEditingLiveGisAcres(null)
               }}
             >
               Edit field boundary
             </button>
           </div>
-          {snapshotMode !== 'view' && (
+          {(snapshotMode !== 'view' || liveBoundaryEditMode) && (
             <>
               <span className="satellite-dashboard-label">
                 {snapshotMode === 'draw_new_field'
                   ? 'Tap points to outline a field. Tap near the first point to finish.'
-                  : 'Tap a field to select, then drag points to adjust.'}
+                  : 'Select a field, then drag points to adjust.'}
               </span>
               <button type="button" className="btn-outline" onClick={cancelSnapshotEdit}>
                 Cancel
               </button>
-              {snapshotMode === 'edit_boundary' && (
+              {(snapshotMode === 'edit_boundary' || liveBoundaryEditMode) && (
                 <button
                   type="button"
                   className="btn-outline"
-                  disabled={!selectedFieldId || !editingRingNorm}
-                  onClick={saveEditedBoundary}
+                  disabled={
+                    snapshotMode === 'edit_boundary'
+                      ? (!selectedFieldId || !editingRingNorm)
+                      : (!editingLiveFieldId || !editingLiveBoundary)
+                  }
+                  onClick={snapshotMode === 'edit_boundary' ? saveEditedBoundary : saveLiveEditedBoundary}
                 >
                   Save boundary
                 </button>

@@ -93,6 +93,20 @@ function clamp01(n: number) {
   return Math.max(0, Math.min(1, n))
 }
 
+function isSameNormPoint(a: number[], b: number[], eps = 1e-6) {
+  return Math.abs((a[0] ?? 0) - (b[0] ?? 0)) <= eps && Math.abs((a[1] ?? 0) - (b[1] ?? 0)) <= eps
+}
+
+function normalizeEditableRingNorm(ringNorm: number[][]): number[][] {
+  if (ringNorm.length < 2) return ringNorm
+  const first = ringNorm[0]
+  const last = ringNorm[ringNorm.length - 1]
+  if (first && last && isSameNormPoint(first, last)) {
+    return ringNorm.slice(0, -1)
+  }
+  return ringNorm
+}
+
 export default function DashboardSnapshotView({
   snapshot,
   fields,
@@ -380,7 +394,8 @@ export default function DashboardSnapshotView({
     if (!selectedFieldId) return null
     const ringNorm = editingRingNorm ?? staticBoundariesByFieldId[selectedFieldId] ?? null
     if (!ringNorm) return null
-    return ringNormToPixels(ringNorm, snapshot.width, snapshot.height)
+    const editableRing = normalizeEditableRingNorm(ringNorm)
+    return ringNormToPixels(editableRing, snapshot.width, snapshot.height)
   }, [selectedFieldId, editingRingNorm, staticBoundariesByFieldId, snapshot.width, snapshot.height])
   const zoomSafeScale = Math.max(scale, 1e-6)
   const polygonStrokeWidth = 2 / zoomSafeScale
@@ -395,9 +410,10 @@ export default function DashboardSnapshotView({
     }
     if (mode === 'edit_boundary') {
       const staticRing = staticBoundariesByFieldId[field.id]
-      const initialRingNorm =
+      const rawInitialRingNorm =
         staticRing ??
         ringPixelsToNorm(points, snapshot.width, snapshot.height).map(([nx, ny]) => [clamp01(nx), clamp01(ny)])
+      const initialRingNorm = normalizeEditableRingNorm(rawInitialRingNorm)
       onSelectFieldForEdit?.(field.id, initialRingNorm)
     }
   }

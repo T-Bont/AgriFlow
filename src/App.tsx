@@ -13,6 +13,7 @@ import TransactionHistory from '@/pages/TransactionHistory'
 import Financials from '@/pages/Financials'
 import Market from '@/pages/Market'
 import Settings from '@/pages/Settings'
+import Help from '@/pages/Help'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="financials" element={<Financials />} />
           <Route path="transactions" element={<TransactionHistory />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="help" element={<Help />} />
           <Route path="field/:fieldId" element={<FieldDetail />} />
           <Route path="field/:fieldId/log" element={<LogPage />} />
           <Route path="log" element={<LogPage />} />

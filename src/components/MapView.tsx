@@ -28,6 +28,9 @@ interface MapViewProps {
   /** When true, show draw control to create a polygon; on complete call onBoundaryDrawn */
   drawMode?: boolean
   onBoundaryDrawn?: (boundary: GeoJSON.Polygon, gisAcres: number) => void
+  /** When true, enable editing existing field polygons directly on the map. */
+  editBoundaryMode?: boolean
+  onBoundaryEdited?: (fieldId: string, boundary: GeoJSON.Polygon, gisAcres: number) => void
   /** When true (default), fit map bounds to all fields on load and when field boundaries change */
   fitBoundsToFields?: boolean
 }
@@ -87,6 +90,8 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     pnlByFieldId = {},
     drawMode = false,
     onBoundaryDrawn,
+    editBoundaryMode = false,
+    onBoundaryEdited,
     fitBoundsToFields = true,
   }: MapViewProps,
   ref,
@@ -97,8 +102,14 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const cleanupMapRef = useRef<(() => void) | null>(null)
   const lastFittedBoundsKeyRef = useRef<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const onFieldSelectRef = useRef(onFieldSelect)
+  onFieldSelectRef.current = onFieldSelect
+  const fieldsRef = useRef(fields)
+  fieldsRef.current = fields
   const onBoundaryDrawnRef = useRef(onBoundaryDrawn)
   onBoundaryDrawnRef.current = onBoundaryDrawn
+  const onBoundaryEditedRef = useRef(onBoundaryEdited)
+  onBoundaryEditedRef.current = onBoundaryEdited
 
   useImperativeHandle(
     ref,
@@ -246,17 +257,61 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   }, [loaded, northUp2D])
 
   useEffect(() => {
-    if (!loaded || !mapRef.current || !drawMode || !onBoundaryDrawn) return
+    if (!loaded || !mapRef.current) return
+    if (!drawMode && !editBoundaryMode) return
     const map = mapRef.current
+    let cancelled = false
     let cleanup: (() => void) | undefined
     import('@mapbox/mapbox-gl-draw').then(({ default: MapboxDraw }) => {
+      if (cancelled) return
+      const isEditMode = editBoundaryMode && !!onBoundaryEditedRef.current
       const draw = new MapboxDraw({
         displayControlsDefault: false,
-        controls: { polygon: true, trash: true },
-        defaultMode: 'draw_polygon',
+        controls: isEditMode ? { trash: false } : { polygon: true, trash: true },
+        defaultMode: isEditMode ? 'simple_select' : 'draw_polygon',
       })
       map.addControl(draw as unknown as mapboxgl.IControl, 'top-left')
       drawRef.current = draw
+
+      if (isEditMode) {
+        const editableFeatures = fieldsRef.current
+          .filter((f) => f.boundary && typeof f.boundary === 'object' && 'coordinates' in f.boundary)
+          .map((f) => ({
+            type: 'Feature' as const,
+            id: f.id,
+            properties: { id: f.id },
+            geometry: f.boundary as GeoJSON.Polygon,
+          }))
+
+        if (editableFeatures.length > 0) {
+          draw.add({
+            type: 'FeatureCollection',
+            features: editableFeatures,
+          })
+        }
+        const handler = (e: {
+          features?: Array<{ id?: string | number; geometry?: { type?: string; coordinates?: number[][][] } }>
+        }) => {
+          const feature = e.features?.[0]
+          const id = feature?.id
+          if (!feature || typeof id !== 'string') return
+          if (feature.geometry?.type !== 'Polygon' || !feature.geometry.coordinates) return
+          const polygon: GeoJSON.Polygon = { type: 'Polygon', coordinates: feature.geometry.coordinates }
+          const acres = polygonAcres(polygon.coordinates)
+          onBoundaryEditedRef.current?.(id, polygon, acres)
+        }
+
+        map.on('draw.update', handler)
+        cleanup = () => {
+          map.off('draw.update', handler)
+          if (drawRef.current) {
+            try { map.removeControl(drawRef.current as mapboxgl.IControl) } catch { /* already removed */ }
+            drawRef.current = null
+          }
+        }
+        return
+      }
+
       const handler = () => {
         const data = draw.getAll()
         const feature = data.features[0]
@@ -279,8 +334,11 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
         }
       }
     })
-    return () => cleanup?.()
-  }, [loaded, drawMode, onBoundaryDrawn])
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
+  }, [loaded, drawMode, editBoundaryMode, onBoundaryDrawn, onBoundaryEdited])
 
   useEffect(() => {
     if (!loaded || !mapRef.current || !MAPBOX_TOKEN || !MAPBOX_TOKEN_IS_PUBLIC) return
@@ -328,8 +386,8 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       })
       map.on('click', layerId, (e) => {
         const id = e.features?.[0]?.properties?.id
-        const field = fields.find((f) => f.id === id)
-        if (field) onFieldSelect(field)
+        const field = fieldsRef.current.find((f) => f.id === id)
+        if (field) onFieldSelectRef.current(field)
       })
       map.getCanvas().style.cursor = 'pointer'
     }

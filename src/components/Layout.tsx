@@ -45,6 +45,9 @@ export default function Layout() {
         <NavLink to="/settings" className={({ isActive }) => (isActive ? 'layout-nav-link active' : 'layout-nav-link')}>
           Settings
         </NavLink>
+        <NavLink to="/help" className={({ isActive }) => (isActive ? 'layout-nav-link active' : 'layout-nav-link')}>
+          Help
+        </NavLink>
       </nav>
       <main className="layout-main">
         <Outlet />
