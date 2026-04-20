@@ -345,7 +345,7 @@ export default function Dashboard() {
                 navigate(`/map/edit${snapshotIdParam}`)
               }}
             >
-              Edit field layout
+              Establish Dashboard View
             </button>
             <button
               type="button"
