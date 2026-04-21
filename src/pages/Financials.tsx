@@ -3,17 +3,25 @@ import FarmPnlChart from '@/components/FarmPnlChart'
 import FinancialTrendChart from '@/components/FinancialTrendChart'
 import NetIncomePerAcreList from '@/components/NetIncomePerAcreList'
 import { useFieldPnl } from '@/hooks/useFieldPnl'
+import { useFields } from '@/hooks/useFields'
 import { useTransactionHistory } from '@/hooks/useTransactionHistory'
 import './Financials.css'
 
 export default function Financials() {
   const { data: pnlRows = [] } = useFieldPnl()
+  const { fields, isLoading: fieldsLoading } = useFields()
   const { items: transactionItems, isLoading: transactionsLoading } = useTransactionHistory()
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  const activeFieldIds = useMemo(() => new Set(fields.map((field) => field.id)), [fields])
+
+  const visiblePnlRows = useMemo(() => {
+    if (fieldsLoading) return pnlRows
+    return pnlRows.filter((row) => activeFieldIds.has(row.field_id))
+  }, [activeFieldIds, fieldsLoading, pnlRows])
 
   const availableYears = useMemo(
-    () => [...new Set(pnlRows.map((row) => row.year))].sort((a, b) => b - a),
-    [pnlRows],
+    () => [...new Set(visiblePnlRows.map((row) => row.year))].sort((a, b) => b - a),
+    [visiblePnlRows],
   )
 
   useEffect(() => {
@@ -28,8 +36,8 @@ export default function Financials() {
 
   const rowsForSeason = useMemo(() => {
     if (selectedYear == null) return []
-    return pnlRows.filter((row) => row.year === selectedYear)
-  }, [pnlRows, selectedYear])
+    return visiblePnlRows.filter((row) => row.year === selectedYear)
+  }, [selectedYear, visiblePnlRows])
 
   return (
     <div className="financials-page">
