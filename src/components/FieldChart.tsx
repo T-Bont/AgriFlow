@@ -78,6 +78,7 @@ export default function FieldChart({ seasonId, pnlRows }: FieldChartProps) {
           <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
           <Tooltip
             shared={false}
+            labelFormatter={(label, payload) => payload?.[0]?.payload?.name ?? label}
             formatter={(value: number, name: string) => [
               `$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
               name,

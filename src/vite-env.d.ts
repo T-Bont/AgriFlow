@@ -12,6 +12,7 @@ interface ImportMeta {
 
 declare module '@mapbox/mapbox-gl-draw' {
   const MapboxDraw: new (options?: Record<string, unknown>) => {
+    add: (feature: GeoJSON.FeatureCollection | GeoJSON.Feature) => unknown
     getAll: () => { features: GeoJSON.Feature[] }
     deleteAll: () => void
   }
