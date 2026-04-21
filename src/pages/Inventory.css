@@ -20,6 +20,19 @@
   gap: 20px;
 }
 
+.inventory-year-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.inventory-year-header {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
 .inventory-battery-card {
   background: var(--surface);
   border: 1px solid var(--border);
