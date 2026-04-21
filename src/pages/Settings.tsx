@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useDashboardSnapshots } from '@/hooks/useDashboardSnapshots'
+import { useFields } from '@/hooks/useFields'
 import { useProfile } from '@/hooks/useProfile'
 import './Settings.css'
 
@@ -12,11 +13,17 @@ export default function Settings() {
     deleteSnapshot,
     setDefaultSnapshotId,
   } = useDashboardSnapshots()
+  const { fields, updateField } = useFields()
   const [draftNames, setDraftNames] = useState<Record<string, string>>({})
+  const [draftFieldNames, setDraftFieldNames] = useState<Record<string, string>>({})
 
   useEffect(() => {
     setDraftNames(Object.fromEntries(snapshots.map((s) => [s.id, s.name])))
   }, [snapshots])
+
+  useEffect(() => {
+    setDraftFieldNames(Object.fromEntries(fields.map((field) => [field.id, field.name])))
+  }, [fields])
 
   const defaultSnapshotId =
     profile?.settings?.dashboard_default_snapshot_id ??
@@ -96,6 +103,42 @@ export default function Settings() {
               <p className="muted">Create another view before deleting your current one.</p>
             )}
           </>
+        )}
+      </section>
+      <section className="settings-section">
+        <h2>Fields</h2>
+        {fields.length === 0 && <p className="muted">No fields yet.</p>}
+        {fields.length > 0 && (
+          <ul className="settings-view-list">
+            {fields.map((field) => (
+              <li key={field.id} className="settings-view-item">
+                <input
+                  type="text"
+                  value={draftFieldNames[field.id] ?? field.name}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setDraftFieldNames((prev) => ({ ...prev, [field.id]: value }))
+                  }}
+                  aria-label={`Rename ${field.name}`}
+                />
+                <button
+                  type="button"
+                  className="btn-outline"
+                  disabled={updateField.isPending}
+                  onClick={() =>
+                    updateField.mutate({
+                      id: field.id,
+                      payload: {
+                        name: (draftFieldNames[field.id] ?? field.name).trim() || field.name,
+                      },
+                    })
+                  }
+                >
+                  Save name
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </div>
