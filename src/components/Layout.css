@@ -84,6 +84,11 @@
 
 @media (max-width: 768px) {
   .layout {
+    --mobile-nav-offset: 12px;
+    --mobile-nav-height: 64px;
+  }
+
+  .layout {
     min-height: 100dvh;
   }
 
@@ -106,13 +111,13 @@
 
   .layout-main {
     order: 2;
-    padding-bottom: calc(var(--touch-min) + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + var(--mobile-nav-offset) + 12px);
   }
 
   .layout-nav {
     order: 3;
     position: sticky;
-    bottom: 0;
+    bottom: calc(env(safe-area-inset-bottom) + var(--mobile-nav-offset));
     z-index: 20;
     gap: 0;
     overflow-x: auto;
@@ -121,9 +126,11 @@
     scrollbar-width: none;
     padding: 0;
     background: var(--surface);
-    border-bottom: none;
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-top: 1px solid rgba(0, 0, 0, 0.08);
-    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: 14px;
+    margin: 0 8px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
   }
 
   .layout-nav::-webkit-scrollbar {
@@ -135,9 +142,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: var(--touch-min);
+    min-height: var(--mobile-nav-height);
     min-width: max-content;
-    padding: 12px 14px;
+    padding: 16px 16px;
     border-bottom: none;
     border-top: 2px solid transparent;
     white-space: nowrap;
@@ -148,7 +155,7 @@
   }
 
   .toast {
-    bottom: calc(var(--touch-min) + 24px + env(safe-area-inset-bottom));
+    bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + var(--mobile-nav-offset) + 28px);
   }
 }
 
