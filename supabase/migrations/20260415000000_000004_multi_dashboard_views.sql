@@ -106,3 +106,4 @@ set settings = jsonb_set(
 )
 from upserted u
 where p.id = u.user_id;
+
