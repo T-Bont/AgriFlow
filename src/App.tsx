@@ -3,11 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { processSyncQueue, pullLatest } from '@/lib/sync'
 import Layout from '@/components/Layout'
+import SidePanel from '@/components/SidePanel'
+import FullOverlay from '@/components/FullOverlay'
 import Login from '@/pages/Login'
-import Dashboard from '@/pages/Dashboard'
 import MapEditLayoutView from '@/pages/MapEditLayoutView'
 import FieldDetail from '@/pages/FieldDetail'
 import LogPage from '@/pages/LogPage'
+import Fields from '@/pages/Fields'
 import Inventory from '@/pages/Inventory'
 import TransactionHistory from '@/pages/TransactionHistory'
 import Financials from '@/pages/Financials'
@@ -50,17 +52,60 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
-          <Route path="map/edit" element={<MapEditLayoutView />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="market" element={<Market />} />
-          <Route path="financials" element={<Financials />} />
-          <Route path="transactions" element={<TransactionHistory />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="help" element={<Help />} />
-          <Route path="field/:fieldId" element={<FieldDetail />} />
-          <Route path="field/:fieldId/log" element={<LogPage />} />
-          <Route path="log" element={<LogPage />} />
+          <Route index element={null} />
+          <Route
+            path="fields"
+            element={
+              <SidePanel title="Fields">
+                <Fields />
+              </SidePanel>
+            }
+          />
+          <Route
+            path="inventory"
+            element={
+              <SidePanel title="Inventory">
+                <Inventory />
+              </SidePanel>
+            }
+          />
+          <Route
+            path="transactions"
+            element={
+              <SidePanel title="Transactions">
+                <TransactionHistory />
+              </SidePanel>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <SidePanel title="Settings">
+                <Settings />
+              </SidePanel>
+            }
+          />
+          <Route
+            path="help"
+            element={
+              <SidePanel title="Help">
+                <Help />
+              </SidePanel>
+            }
+          />
+          <Route
+            path="field/:fieldId"
+            element={
+              <SidePanel>
+                <FieldDetail />
+              </SidePanel>
+            }
+          />
+          <Route path="financials" element={<FullOverlay title="Financials"><Financials /></FullOverlay>} />
+          <Route path="market" element={<FullOverlay title="Market"><Market /></FullOverlay>} />
+          <Route path="map/edit" element={<FullOverlay><MapEditLayoutView /></FullOverlay>} />
+          <Route path="field/:fieldId/log" element={<FullOverlay><LogPage /></FullOverlay>} />
+          <Route path="log" element={<FullOverlay><LogPage /></FullOverlay>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useFields } from '@/hooks/useFields'
 import { useSeasons } from '@/hooks/useSeasons'
 import { useFieldPnl } from '@/hooks/useFieldPnl'
-import FAB from '@/components/FAB'
 import FieldChart from '@/components/FieldChart'
 import TransactionList from '@/components/TransactionList'
 import AddSeasonForm from '@/components/AddSeasonForm'
@@ -99,7 +98,6 @@ export default function FieldDetail() {
           </section>
         </>
       )}
-      <FAB to={`/field/${fieldId}/log`} />
     </div>
   )
 }

@@ -257,6 +257,29 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   }, [loaded, northUp2D])
 
   useEffect(() => {
+    if (!loaded || !mapRef.current || !containerRef.current) return
+    const map = mapRef.current
+    const container = containerRef.current
+
+    const triggerResize = () => {
+      map.resize()
+    }
+
+    triggerResize()
+
+    const observer = new ResizeObserver(() => {
+      triggerResize()
+    })
+    observer.observe(container)
+
+    window.addEventListener('resize', triggerResize)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', triggerResize)
+    }
+  }, [loaded])
+
+  useEffect(() => {
     if (!loaded || !mapRef.current) return
     if (!drawMode && !editBoundaryMode) return
     const map = mapRef.current

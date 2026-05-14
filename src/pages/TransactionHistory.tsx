@@ -164,27 +164,7 @@ export default function TransactionHistory() {
   const [draftNetWeight, setDraftNetWeight] = useState('')
   const [draftMoisturePct, setDraftMoisturePct] = useState('')
   const [draftShrinkPct, setDraftShrinkPct] = useState('')
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
 
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 768px)')
-    const onChange = () => setIsMobile(media.matches)
-    onChange()
-    media.addEventListener('change', onChange)
-    return () => media.removeEventListener('change', onChange)
-  }, [])
-
-  if (isLoading) {
-    return <p className="muted">Loading transactions…</p>
-  }
-  if (error) {
-    return <p className="muted">Failed to load transactions.</p>
-  }
-  if (!items.length) {
-    return <p className="muted">No transactions yet.</p>
-  }
-
-  const selected = items.find((t) => t.id === selectedId) ?? null
   const seasonsForDraftField = useMemo(
     () => seasons.filter((s) => s.field_id === draftFieldId).sort((a, b) => b.year - a.year),
     [draftFieldId, seasons],
@@ -199,6 +179,16 @@ export default function TransactionHistory() {
       setDraftSeasonId('')
     }
   }, [draftSeasonId, editingId, seasonsForDraftField])
+
+  if (isLoading) {
+    return <p className="muted">Loading transactions…</p>
+  }
+  if (error) {
+    return <p className="muted">Failed to load transactions.</p>
+  }
+  if (!items.length) {
+    return <p className="muted">No transactions yet.</p>
+  }
 
   const startEdit = (item: (typeof items)[number]) => {
     const metaData = asRecord(item.meta_data)
@@ -390,82 +380,85 @@ export default function TransactionHistory() {
       return (
     <section className="transaction-history-detail">
       <h3>Details</h3>
-      <div className="th-detail-actions">
-        <button type="button" className="btn-outline" onClick={() => startEdit(item)}>
-          Edit
-        </button>
-        <button
-          type="button"
-          className="btn-outline danger"
-          onClick={() => void handleDelete(item)}
-          disabled={deleteTransaction.isPending}
-        >
-          Delete
-        </button>
-      </div>
-      <dl>
-        <div className="th-detail-row">
-          <dt>Date</dt>
-          <dd>{item.date}</dd>
-        </div>
-        <div className="th-detail-row">
-          <dt>Field</dt>
-          <dd>{item.field_name}</dd>
-        </div>
-        <div className="th-detail-row">
-          <dt>Season</dt>
-          <dd>
-            {item.season.year
-              ? `${item.season.year} ${item.season.crop_type}`
-              : item.season.crop_type}
-          </dd>
-        </div>
-        <div className="th-detail-row">
-          <dt>Category</dt>
-          <dd>{CATEGORY_LABELS[item.category]}</dd>
-        </div>
-        <div className="th-detail-row">
-          <dt>Type</dt>
-          <dd>{item.type}</dd>
-        </div>
-        {item.category !== 'Harvest' && (
-          <div className="th-detail-row">
-            <dt>Amount</dt>
-            <dd>
-              {item.type === 'INCOME' ? '+' : '-'}$
-              {Math.abs(item.amount).toLocaleString()}
-            </dd>
+      {editingId !== item.id ? (
+        <>
+          <div className="th-detail-actions">
+            <button type="button" className="btn-outline" onClick={() => startEdit(item)}>
+              Edit
+            </button>
+            <button
+              type="button"
+              className="btn-outline danger"
+              onClick={() => void handleDelete(item)}
+              disabled={deleteTransaction.isPending}
+            >
+              Delete
+            </button>
           </div>
-        )}
-        {item.quantity != null && (
-          <div className="th-detail-row">
-            <dt>Quantity</dt>
-            <dd>
-              {item.quantity.toLocaleString()}
-              {item.unit ? ` ${item.unit}` : ''}
-            </dd>
-          </div>
-        )}
-        {item.vendor && (
-          <div className="th-detail-row">
-            <dt>Vendor / Payee</dt>
-            <dd>{item.vendor}</dd>
-          </div>
-        )}
-        {item.notes && (
-          <div className="th-detail-row">
-            <dt>Notes</dt>
-            <dd>{item.notes}</dd>
-          </div>
-        )}
-        {[...categoryRows, ...fallbackRows].map((row) => (
-          <div className="th-detail-row" key={`${row.label}-${row.value}`}>
-            <dt>{row.label}</dt>
-            <dd>{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-      {editingId === item.id && (
+          <dl>
+            <div className="th-detail-row">
+              <dt>Date</dt>
+              <dd>{item.date}</dd>
+            </div>
+            <div className="th-detail-row">
+              <dt>Field</dt>
+              <dd>{item.field_name}</dd>
+            </div>
+            <div className="th-detail-row">
+              <dt>Season</dt>
+              <dd>
+                {item.season.year
+                  ? `${item.season.year} ${item.season.crop_type}`
+                  : item.season.crop_type}
+              </dd>
+            </div>
+            <div className="th-detail-row">
+              <dt>Category</dt>
+              <dd>{CATEGORY_LABELS[item.category]}</dd>
+            </div>
+            <div className="th-detail-row">
+              <dt>Type</dt>
+              <dd>{item.type}</dd>
+            </div>
+            {item.category !== 'Harvest' && (
+              <div className="th-detail-row">
+                <dt>Amount</dt>
+                <dd>
+                  {item.type === 'INCOME' ? '+' : '-'}$
+                  {Math.abs(item.amount).toLocaleString()}
+                </dd>
+              </div>
+            )}
+            {item.quantity != null && (
+              <div className="th-detail-row">
+                <dt>Quantity</dt>
+                <dd>
+                  {item.quantity.toLocaleString()}
+                  {item.unit ? ` ${item.unit}` : ''}
+                </dd>
+              </div>
+            )}
+            {item.vendor && (
+              <div className="th-detail-row">
+                <dt>Vendor / Payee</dt>
+                <dd>{item.vendor}</dd>
+              </div>
+            )}
+            {item.notes && (
+              <div className="th-detail-row">
+                <dt>Notes</dt>
+                <dd>{item.notes}</dd>
+              </div>
+            )}
+            {[...categoryRows, ...fallbackRows].map((row) => (
+              <div className="th-detail-row" key={`${row.label}-${row.value}`}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      ) : (
         <form
           className="th-edit-form"
           onSubmit={(e) => {
@@ -667,7 +660,6 @@ export default function TransactionHistory() {
 
   return (
     <div className="transaction-history-page">
-      <h2>Transaction history</h2>
       <div className="transaction-history-layout">
         <ul className="transaction-history-list">
           {items.map((t) => {
@@ -695,12 +687,11 @@ export default function TransactionHistory() {
                   </span>
                   <span className={`th-amount ${amountClass}`}>{amountLabel}</span>
                 </button>
-                {isMobile && isSelected && <div className="th-inline-detail">{renderDetail(t)}</div>}
+                {isSelected && <div className="th-inline-detail">{renderDetail(t)}</div>}
               </li>
             )
           })}
         </ul>
-        {!isMobile && selected && renderDetail(selected)}
       </div>
     </div>
   )

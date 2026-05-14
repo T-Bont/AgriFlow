@@ -1,0 +1,58 @@
+.fields-panel {
+  padding: 16px;
+}
+
+.fields-panel-heading {
+  margin: 0 0 12px;
+  font-size: var(--font-heading);
+}
+
+.fields-panel .muted {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.add-field-form {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-field-form input {
+  min-height: var(--touch-min);
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: var(--radius);
+}
+
+.add-field-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.add-field-actions button {
+  flex: 1;
+}
+
+.add-field-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.add-field-drawn-hint {
+  margin-bottom: 8px;
+}
+
+.fields-panel .btn-outline {
+  margin-top: 0;
+  background: var(--surface);
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}

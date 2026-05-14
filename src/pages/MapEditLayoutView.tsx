@@ -8,7 +8,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Field } from '@/types/database'
 import { supabase } from '@/lib/supabase'
-import './Dashboard.css'
+import './MapEditLayoutView.css'
 
 export default function MapEditLayoutView() {
   const navigate = useNavigate()
