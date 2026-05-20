@@ -1,0 +1,60 @@
+/* Map editor full overlay — reuses satellite toolbar styling from MapShell */
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.dashboard-page .satellite-dashboard {
+  flex: 1;
+  min-height: 280px;
+  background: #1a3c34;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-page .satellite-dashboard-map {
+  width: 100%;
+  flex: 1;
+  min-height: 240px;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-page .satellite-dashboard-toggles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-page .satellite-dashboard-label {
+  color: #fff;
+  font-size: 14px;
+}
+
+.dashboard-page .satellite-dashboard-toggles button {
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+}
+
+.dashboard-page .satellite-dashboard-toggles button.active {
+  background: var(--primary-light);
+  border-color: var(--primary-light);
+}
+
+.dashboard-page .satellite-dashboard-map .mapboxgl-map {
+  overflow: hidden;
+}
+
+.dashboard-page .satellite-dashboard-map .mapboxgl-ctrl-attrib {
+  max-width: 100%;
+}

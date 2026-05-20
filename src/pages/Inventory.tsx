@@ -28,15 +28,13 @@ export default function Inventory() {
   if (groups.length === 0) {
     return (
       <div className="inventory-page">
-        <h2>Inventory</h2>
-        <p className="muted">No seasons yet. Add fields and seasons on Home to see harvest and sales here.</p>
+        <p className="muted">No seasons yet. Add fields and seasons from Fields to see harvest and sales here.</p>
       </div>
     )
   }
 
   return (
     <div className="inventory-page">
-      <h2>Inventory</h2>
       <p className="inventory-intro">
         Total harvested vs sold/contracted by crop and year. Unsold grain is market risk.
       </p>

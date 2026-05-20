@@ -39,7 +39,7 @@ export default function Settings() {
         <h2>Dashboard views</h2>
         {isLoading && <p className="muted">Loading views...</p>}
         {!isLoading && snapshots.length === 0 && (
-          <p className="muted">No static dashboard views yet. Create one from Home using Add View.</p>
+          <p className="muted">No static dashboard views yet. Create one from the map using Add View.</p>
         )}
         {snapshots.length > 0 && (
           <>

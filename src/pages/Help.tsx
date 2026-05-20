@@ -11,21 +11,21 @@ const helpItems: HelpItem[] = [
   {
     question: 'How do I draw a new field?',
     answer:
-      'Open Home, select map edit mode, and draw the boundary around your new field. Save to create the field and make it available for planning and logs.',
+      'Open the Map, use Draw new field (or add from Fields), and draw the boundary around your new field. Save to create the field and make it available for planning and logs.',
     gifPath: '/help-gifs/draw-new-field.gif',
     gifAlt: 'Demonstration of drawing a new field on the map.',
   },
   {
     question: 'How do I change my static dashboard view?',
     answer:
-      'Open your dashboard controls, choose the view selector, and switch to the saved static view you want to use.',
+      'On the map toolbar, choose the Current View selector and switch to the saved static view you want to use.',
     gifPath: '/help-gifs/establish-dashboard-view.gif',
     gifAlt: 'Demonstration of changing the current static dashboard view.',
   },
   {
     question: 'How do I create an additional static dashboard?',
     answer:
-      'From Home, use Add View to create another static snapshot. Name it clearly so it is easy to pick later in dashboard and settings.',
+      'From the map, use Add View to create another static snapshot. Name it clearly so it is easy to pick later on the map and in Settings.',
     gifPath: '/help-gifs/create-new-view.gif',
     gifAlt: 'Demonstration of creating an additional static dashboard view.',
   },
@@ -41,7 +41,6 @@ const helpItems: HelpItem[] = [
 export default function Help() {
   return (
     <div className="help-page">
-      <h2>Help</h2>
       <p className="help-intro">
         Browse common questions and expand each section to view the steps and a short walkthrough GIF.
       </p>

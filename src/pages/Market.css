@@ -22,10 +22,6 @@
   gap: 12px;
 }
 
-.market-section-header h2 {
-  margin: 0;
-}
-
 .market-update {
   margin: 0;
   color: var(--text-muted);

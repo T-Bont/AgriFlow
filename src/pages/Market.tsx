@@ -100,7 +100,6 @@ export default function Market() {
     <div className="market-page">
       <section className="market-section">
         <div className="market-section-header">
-          <h2>Market</h2>
           {latestBidUpdate && (
             <p className={`market-update ${isBidStale ? 'stale' : ''}`}>
               Updated {latestBidUpdate.toLocaleTimeString()}

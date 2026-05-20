@@ -64,7 +64,7 @@ export default function LogPage() {
           ))}
         </ul>
         {fields.length === 0 && (
-          <p className="muted">No fields yet. Add a field on the dashboard first.</p>
+          <p className="muted">No fields yet. Add a field from Fields first.</p>
         )}
       </div>
     )

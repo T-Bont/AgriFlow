@@ -42,7 +42,6 @@ export default function Financials() {
   return (
     <div className="financials-page">
       <section className="financials-header">
-        <h2>Financials</h2>
         {availableYears.length > 0 ? (
           <label className="financials-season-select">
             <span>Season:</span>
